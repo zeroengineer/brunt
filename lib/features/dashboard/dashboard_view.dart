@@ -30,7 +30,7 @@ class DashboardView extends ConsumerWidget {
     }
     final p = data.projection;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(BSpace.gutter, 8, BSpace.gutter, 140),
+      padding: const EdgeInsets.fromLTRB(BSpace.gutter, 8, BSpace.gutter, 120),
       children: [
         Center(child: _StatusPill(p)),
         const SizedBox(height: 18),
@@ -67,7 +67,7 @@ class DashboardView extends ConsumerWidget {
       ));
     }
     final gap = p.gap;
-    if (gap != null && !gap.beyondHistory) {
+    if (gap != null && !gap.beyondHistory && gap.need > 0) {
       out.add(InfoBanner(
         icon: gap.ok ? LucideIcons.shieldCheck : LucideIcons.triangleAlert,
         color: gap.ok ? BColors.success : BColors.danger,

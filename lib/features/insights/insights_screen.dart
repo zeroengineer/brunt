@@ -62,7 +62,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     final d = async.value;
 
     final body = ListView(
-      padding: const EdgeInsets.fromLTRB(BSpace.gutter, 8, BSpace.gutter, 140),
+      padding: const EdgeInsets.fromLTRB(BSpace.gutter, 8, BSpace.gutter, 120),
       children: [
         Row(children: [
           Expanded(child: Text(d == null ? '' : _periodLabel(d.stats), style: BText.caption)),

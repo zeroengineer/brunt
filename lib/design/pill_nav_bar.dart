@@ -10,11 +10,14 @@ class NavItem {
 
 /// Bottom icon nav with an active pill (reference bottom-right block).
 class PillNavBar extends StatelessWidget {
-  const PillNavBar({super.key, required this.items, required this.selected, required this.onChanged});
+  const PillNavBar({super.key, required this.items, required this.selected, required this.onChanged, this.action});
 
   final List<NavItem> items;
   final int selected;
   final ValueChanged<int> onChanged;
+
+  /// Optional round action at the right end (BRUNT's + button lives here so it never covers content).
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +38,7 @@ class PillNavBar extends StatelessWidget {
           child: Row(children: [
             for (var i = 0; i < items.length; i++)
               Expanded(
-                flex: i == selected ? 5 : 3,
+                flex: i == selected ? 9 : 5,
                 child: Semantics(
                   selected: i == selected,
                   button: true,
@@ -65,7 +68,34 @@ class PillNavBar extends StatelessWidget {
                   ),
                 ),
               ),
+            if (action != null) ...[const SizedBox(width: 6), action!],
           ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// Round primary button sized for the nav pill.
+class NavAction extends StatelessWidget {
+  const NavAction({super.key, required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: Material(
+        color: BColors.primaryLight,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(width: 50, height: 50, child: Icon(icon, size: 24, color: const Color(0xFF0B1A2E))),
         ),
       ),
     );

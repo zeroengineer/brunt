@@ -45,7 +45,7 @@ class PeriodStats {
 
   int get monthCount => months.isEmpty ? 1 : months.length;
   int avgPerMonth(int total) => Money.divRound(total, monthCount);
-  int get dailyAverage => Money.divRound(expense, days == 0 ? 1 : days);
+  int get dailyAverage => Money.divRound(expense, days == 0 ? 1 : days) ~/ 100 * 100; // whole rupees
   int get savingsRatePct => income <= 0 ? 0 : (saved * 100 ~/ income);
 }
 

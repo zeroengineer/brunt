@@ -97,7 +97,7 @@ class _PagedTxListState extends ConsumerState<PagedTxList> {
         return false;
       },
       child: ListView.builder(
-        padding: widget.padding ?? const EdgeInsets.fromLTRB(BSpace.gutter, 0, BSpace.gutter, 140),
+        padding: widget.padding ?? const EdgeInsets.fromLTRB(BSpace.gutter, 0, BSpace.gutter, 120),
         itemCount: items.length + 2,
         itemBuilder: (context, i) {
           if (i == 0) return widget.header ?? const SizedBox();

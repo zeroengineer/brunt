@@ -24,20 +24,6 @@ class AppShell extends StatelessWidget {
         backgroundColor: Colors.transparent,
         extendBody: true,
         body: shell,
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-        floatingActionButton: Padding(
-          padding: const EdgeInsets.only(bottom: 70),
-          child: Semantics(
-            label: 'Add entry',
-            button: true,
-            child: FloatingActionButton(
-              heroTag: 'add',
-              tooltip: 'Add expense, income or transfer',
-              onPressed: () => showAddEntrySheet(context),
-              child: const Icon(LucideIcons.plus, size: 26),
-            ),
-          ),
-        ),
         bottomNavigationBar: DecoratedBox(
           // content scrolling under the floating nav fades out instead of showing through
           decoration: const BoxDecoration(
@@ -54,6 +40,7 @@ class AppShell extends StatelessWidget {
               items: _items,
               selected: shell.currentIndex,
               onChanged: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+              action: NavAction(icon: LucideIcons.plus, label: 'Add expense, income or transfer', onTap: () => showAddEntrySheet(context)),
             ),
           ),
         ),

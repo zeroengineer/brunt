@@ -22,7 +22,8 @@ class AppCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: borderColor ?? BColors.border),
       ),
-      child: child,
+      // ListTiles and ink splashes inside the card paint on this Material
+      child: Material(type: MaterialType.transparency, child: child),
     );
     if (onTap == null) return box;
     return Material(

@@ -155,7 +155,7 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                   message: 'Add bus fare, food or tea as a daily recurring item to log it here in two taps.',
                 )
               : ListView(
-                  padding: const EdgeInsets.fromLTRB(BSpace.gutter, 16, BSpace.gutter, 140),
+                  padding: const EdgeInsets.fromLTRB(BSpace.gutter, 16, BSpace.gutter, 120),
                   children: [
                     if (todays.isEmpty)
                       EmptyState(icon: LucideIcons.sun, title: 'Nothing scheduled', message: 'No daily items run on ${Dates.weekdayShort[_day.weekday - 1]}.')

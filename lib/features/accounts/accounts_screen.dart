@@ -78,7 +78,7 @@ class AccountsScreen extends ConsumerWidget {
         ),
         Expanded(
           child: ReorderableListView.builder(
-            padding: const EdgeInsets.fromLTRB(BSpace.gutter, 0, BSpace.gutter, 140),
+            padding: const EdgeInsets.fromLTRB(BSpace.gutter, 0, BSpace.gutter, 120),
             header: Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: AppCard(

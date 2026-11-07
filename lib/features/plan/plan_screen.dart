@@ -61,7 +61,7 @@ class PlanView extends ConsumerWidget {
     final paid = items.where((p) => p.status == 'paid').fold<int>(0, (s, p) => s + p.amount);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(BSpace.gutter, 8, BSpace.gutter, 140),
+      padding: const EdgeInsets.fromLTRB(BSpace.gutter, 8, BSpace.gutter, 120),
       children: [
         AppCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
