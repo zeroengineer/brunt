@@ -19,6 +19,25 @@ A private, fully offline monthly money planner for Android (Flutter). See
   PIN backoff, optional wipe, FLAG_SECURE, no INTERNET permission, no cloud backup.
 - **Encrypted backups** — Argon2id + AES-256-GCM with checksum, made in a background isolate.
 
+## Tested on a device
+
+Every flow was walked over adb on a Samsung Galaxy M13 (Android 14, 384×856 dp, 32-bit
+`armeabi-v7a`, Mali-G52): onboarding, PIN create/unlock, accounts (cash, bank, UPI → bank,
+credit card), recurring items, daily log, expense / transfer / salary received, pay and skip
+planned items, history, insights, settings, lock, erase everything.
+
+Measured on that phone with a release/profile build:
+
+| What | Result |
+|---|---|
+| Cold start → first frame | 2.7 s |
+| PIN unlock → dashboard | ≈ 2–3 s (Argon2id 8 MiB in pure Dart) |
+| Scrolling the dashboard | 126 frames presented, 0 janky, avg 16.6 ms (60 fps) |
+
+Rendering uses Impeller's OpenGL backend; Vulkan stuttered and broke screen capture on this GPU.
+Screenshot blocking (`FLAG_SECURE`) is enabled only in release builds, so debug and profile
+builds can be captured for testing.
+
 ## Development
 
 ```sh
