@@ -221,7 +221,7 @@ class _SafeCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(Money.format(p.safePerDay), style: BText.amount(size: 30, weight: FontWeight.w800)),
             const SizedBox(height: 4),
-            Text('beyond planned costs · ${p.daysLeft} day${p.daysLeft == 1 ? '' : 's'} left', style: BText.caption),
+            Text('${p.daysLeft} day${p.daysLeft == 1 ? '' : 's'} left · after plan', style: BText.caption),
           ]),
         ),
         Container(width: 1, height: 56, color: BColors.border),
