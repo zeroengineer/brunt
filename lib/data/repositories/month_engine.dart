@@ -128,9 +128,9 @@ class MonthEngine {
         type: TxType.of(t.type),
         amount: t.amount,
         accountId: t.accountId,
-        accountIsCard: types[t.accountId] == AccountType.creditCard.code,
+        accountIsCard: AccountType.of(types[t.accountId] ?? '').isLiability,
         toAccountId: t.toAccountId,
-        toIsCard: types[t.toAccountId] == AccountType.creditCard.code,
+        toIsCard: t.toAccountId != null && AccountType.of(types[t.toAccountId] ?? '').isLiability,
       );
       d.forEach((k, v) => out[k] = (out[k] ?? 0) + v);
     }
@@ -256,9 +256,9 @@ class MonthEngine {
           type: TxType.of(t.type),
           amount: t.amount,
           accountId: t.accountId,
-          accountIsCard: types[t.accountId] == AccountType.creditCard.code,
+          accountIsCard: AccountType.of(types[t.accountId] ?? '').isLiability,
           toAccountId: t.toAccountId,
-          toIsCard: types[t.toAccountId] == AccountType.creditCard.code,
+          toIsCard: t.toAccountId != null && AccountType.of(types[t.toAccountId] ?? '').isLiability,
         );
         outstanding -= d[c.id] ?? 0;
       }
@@ -304,9 +304,9 @@ class MonthEngine {
             type: TxType.of(t.type),
             amount: t.amount,
             accountId: t.accountId,
-            accountIsCard: types[t.accountId] == AccountType.creditCard.code,
+            accountIsCard: AccountType.of(types[t.accountId] ?? '').isLiability,
             toAccountId: t.toAccountId,
-            toIsCard: types[t.toAccountId] == AccountType.creditCard.code,
+            toIsCard: t.toAccountId != null && AccountType.of(types[t.toAccountId] ?? '').isLiability,
           );
           d.forEach((k, v) {
             totals[k] = (totals[k] ?? 0) + v;

@@ -69,7 +69,7 @@ class _SalarySheetState extends ConsumerState<_SalarySheet> {
   @override
   Widget build(BuildContext context) {
     final accounts = (ref.watch(accountsProvider).value ?? const <AccountRow>[])
-        .where((a) => a.type != AccountType.creditCard.code && a.type != AccountType.upi.code)
+        .where((a) => !AccountType.of(a.type).isLiability && a.type != AccountType.upi.code && a.type != AccountType.lent.code)
         .toList();
     final first = Dates.firstOfYearMonth(widget.month.yearMonth);
     final last = Dates.lastOfMonth(first);

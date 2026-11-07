@@ -130,7 +130,7 @@ class _AccountFormState extends ConsumerState<AccountForm> {
         const SizedBox(height: 8),
         ChoicePills<AccountType>(
           wrap: true,
-          items: [for (final t in AccountType.values) ChoiceItem(t, t.label, icon: BIcons.of(BIcons.defaultForAccount(t)))],
+          items: [for (final t in AccountType.values.where((t) => !t.isSystem)) ChoiceItem(t, t.label, icon: BIcons.of(BIcons.defaultForAccount(t)))],
           selected: _type,
           onChanged: (t) => setState(() {
             _type = t;
@@ -149,6 +149,8 @@ class _AccountFormState extends ConsumerState<AccountForm> {
           AccountType.wallet => 'Paytm wallet',
           AccountType.creditCard => 'ICICI Amazon Pay card',
           AccountType.savings => 'RD / Emergency fund',
+          AccountType.loan => 'Borrowed',
+          AccountType.lent => 'Lent out',
         },
         textInputAction: TextInputAction.next,
       ),

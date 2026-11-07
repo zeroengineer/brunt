@@ -52,10 +52,10 @@ class AccountsScreen extends ConsumerWidget {
     final archived = all.where((a) => a.archived).toList();
 
     int sum(bool Function(AccountRow) f) => active.where(f).fold(0, (s, a) => s + a.balance);
-    final spendable = sum((a) => a.includeInSpendable && a.type != AccountType.creditCard.code && a.type != AccountType.upi.code);
+    final spendable = sum((a) => a.includeInSpendable && !AccountType.of(a.type).isLiability && a.type != AccountType.upi.code && a.type != AccountType.lent.code);
     final savings = sum((a) => a.type == AccountType.savings.code);
-    final dues = sum((a) => a.type == AccountType.creditCard.code);
-    final assets = sum((a) => a.type != AccountType.creditCard.code && a.type != AccountType.upi.code);
+    final dues = sum((a) => AccountType.of(a.type).isLiability);
+    final assets = sum((a) => !AccountType.of(a.type).isLiability && a.type != AccountType.upi.code);
 
     return SafeArea(
       bottom: false,
@@ -90,7 +90,7 @@ class AccountsScreen extends ConsumerWidget {
                   ]),
                   const SizedBox(height: 14),
                   Row(children: [
-                    _Stat('Card dues', dues, dues > 0 ? BColors.danger : BColors.text),
+                    _Stat('Dues', dues, dues > 0 ? BColors.danger : BColors.text),
                     _Stat('Net worth', assets - dues, BColors.success),
                   ]),
                 ]),
@@ -168,6 +168,7 @@ class _AccountCard extends StatelessWidget {
     final a = account;
     final type = AccountType.of(a.type);
     final card = type == AccountType.creditCard;
+    final owed = type.isLiability;
     final color = accountColor(a);
     final usedPct = card && (a.creditLimit ?? 0) > 0 ? (a.balance / a.creditLimit!).clamp(0.0, 1.0) : null;
     return AppCard(
@@ -185,8 +186,8 @@ class _AccountCard extends StatelessWidget {
           ),
           if (type != AccountType.upi)
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(Money.format(a.balance), style: BText.amount(size: 17, color: card && a.balance > 0 ? BColors.danger : BColors.text)),
-              if (card) Text('outstanding', style: BText.caption.copyWith(fontSize: 10.5)),
+              Text(Money.format(a.balance), style: BText.amount(size: 17, color: owed && a.balance > 0 ? BColors.danger : BColors.text)),
+              if (owed) Text(card ? 'outstanding' : 'to pay back', style: BText.caption.copyWith(fontSize: 10.5)),
             ]),
         ]),
         if (usedPct != null) ...[

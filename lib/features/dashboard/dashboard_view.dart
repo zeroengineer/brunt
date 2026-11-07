@@ -184,7 +184,7 @@ class _AccountStrip extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
           final a = shown[i];
-          final card = a.type == AccountType.creditCard.code;
+          final card = AccountType.of(a.type).isLiability;
           return AppCard(
             radius: 20,
             onTap: () => context.push('/account/${a.id}'),

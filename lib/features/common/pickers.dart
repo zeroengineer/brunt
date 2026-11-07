@@ -13,6 +13,8 @@ Color accountColor(AccountRow a) => BColors.fromHex(a.color, fallback: switch (A
       AccountType.wallet => BColors.warning,
       AccountType.creditCard => BColors.danger,
       AccountType.savings => BColors.tierSavings,
+      AccountType.loan => BColors.warning,
+      AccountType.lent => BColors.primarySoft,
     });
 
 IconData accountIcon(AccountRow a) => BIcons.of(a.icon ?? BIcons.defaultForAccount(AccountType.of(a.type)));
@@ -33,7 +35,7 @@ List<ChoiceItem<int>> accountItems(Iterable<AccountRow> accounts, {bool showBala
           color: accountColor(a),
           sub: !showBalance || a.type == AccountType.upi.code
               ? null
-              : (a.type == AccountType.creditCard.code ? 'due ${Money.compact(a.balance)}' : Money.compact(a.balance)),
+              : (AccountType.of(a.type).isLiability ? 'due ${Money.compact(a.balance)}' : Money.compact(a.balance)),
         ),
     ];
 
@@ -43,6 +45,8 @@ String accountSubtitle(AccountRow a, List<AccountRow> all) {
     final bank = all.where((x) => x.id == a.linkedAccountId).firstOrNull;
     return 'UPI · via ${bank?.name ?? '—'}';
   }
+  if (t == AccountType.loan) return 'Borrowed · still to pay back';
+  if (t == AccountType.lent) return 'Lent out · owed to you';
   if (t == AccountType.creditCard) {
     final limit = a.creditLimit;
     return limit == null ? 'Credit card' : 'Available ${Money.format(limit - a.balance)} of ${Money.compact(limit)}';

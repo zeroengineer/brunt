@@ -163,7 +163,7 @@ abstract final class ProjectionEngine {
     }
 
     bool spendable(PAccount a) =>
-        a.includeInSpendable && a.type != AccountType.creditCard && a.type != AccountType.upi;
+        a.includeInSpendable && !a.type.isLiability && a.type != AccountType.upi && a.type != AccountType.lent;
 
     /// Will money for this item leave the spendable pool this month?
     /// Null account = unknown → assume yes. Card → no (it goes on the card's next bill).
@@ -266,7 +266,7 @@ abstract final class ProjectionEngine {
       }
     }
     for (final a in i.accounts) {
-      if (!a.type.holdsBalance || a.type == AccountType.creditCard || a.type == AccountType.savings) continue;
+      if (!a.type.holdsBalance || a.type.isLiability || a.type == AccountType.savings || a.type == AccountType.lent) continue;
       var b = a.balance;
       var minB = b;
       DateTime? runOut;

@@ -59,6 +59,17 @@ class CatalogRepo {
         return id;
       });
 
+  /// Finds or creates a BRUNT-managed account (Borrowed / Lent out).
+  Future<int> ensureSystemAccount(AccountType type) async {
+    final existing = await (db.select(db.accounts)..where((a) => a.type.equals(type.code))).get();
+    if (existing.isNotEmpty) {
+      final a = existing.first;
+      if (a.archived) await setArchived(a.id, false);
+      return a.id;
+    }
+    return createAccount(name: type.label, type: type, includeInSpendable: false);
+  }
+
   Future<void> updateAccount(
     int id, {
     required String name,

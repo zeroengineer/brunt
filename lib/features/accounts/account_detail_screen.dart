@@ -23,7 +23,7 @@ class AccountDetailScreen extends ConsumerWidget {
 
   Future<void> _adjust(BuildContext context, WidgetRef ref, AccountRow a) async {
     final ctrl = TextEditingController(text: rupeesText(a.balance));
-    final card = a.type == AccountType.creditCard.code;
+    final card = AccountType.of(a.type).isLiability;
     final ok = await showBruntSheet<bool>(
       context,
       builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -79,6 +79,7 @@ class AccountDetailScreen extends ConsumerWidget {
     if (a == null) return const BruntScaffold(showBack: true, body: Center(child: CircularProgressIndicator()));
     final type = AccountType.of(a.type);
     final card = type == AccountType.creditCard;
+    final owed = type.isLiability;
     final upi = type == AccountType.upi;
 
     final header = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -93,9 +94,9 @@ class AccountDetailScreen extends ConsumerWidget {
           ]),
           const SizedBox(height: 16),
           if (!upi) ...[
-            Text(card ? 'Outstanding due' : 'Balance', style: BText.caption),
+            Text(owed ? (card ? 'Outstanding due' : 'Still to pay back') : (type == AccountType.lent ? 'Owed to you' : 'Balance'), style: BText.caption),
             const SizedBox(height: 4),
-            Text(Money.format(a.balance), style: BText.display.copyWith(fontSize: 34, color: card && a.balance > 0 ? BColors.danger : BColors.text)),
+            Text(Money.format(a.balance), style: BText.display.copyWith(fontSize: 34, color: owed && a.balance > 0 ? BColors.danger : BColors.text)),
           ] else
             Text('Payments via ${a.name} come out of ${all.byId(a.linkedAccountId)?.name ?? 'its bank'}.', style: BText.body),
           if (card && a.creditLimit != null) ...[
@@ -123,11 +124,11 @@ class AccountDetailScreen extends ConsumerWidget {
         if (!upi)
           PillButton(label: 'Adjust balance', icon: LucideIcons.scale, dense: true, variant: PillVariant.soft, onPressed: () => _adjust(context, ref, a)),
         PillButton(
-          label: card ? 'Pay card' : 'Transfer',
+          label: card ? 'Pay card' : (type == AccountType.loan ? 'Pay back' : (type == AccountType.lent ? 'Got it back' : 'Transfer')),
           icon: LucideIcons.arrowLeftRight,
           dense: true,
           variant: PillVariant.soft,
-          onPressed: () => showAddEntrySheet(context, presetType: TxType.transfer, presetAccount: card ? null : a.id),
+          onPressed: () => showAddEntrySheet(context, presetType: TxType.transfer, presetAccount: owed ? null : a.id, presetTo: owed ? a.id : null),
         ),
         PillButton(label: 'Edit', icon: LucideIcons.pencil, dense: true, variant: PillVariant.soft, onPressed: () => showAccountForm(context, existing: a)),
       ]),

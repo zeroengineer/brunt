@@ -65,6 +65,8 @@ abstract final class BIcons {
         AccountType.wallet => 'wallet',
         AccountType.creditCard => 'credit_card',
         AccountType.savings => 'piggy_bank',
+        AccountType.loan => 'hand_coins',
+        AccountType.lent => 'hand_coins',
       };
 
   static IconData tier(Tier t) => switch (t) {

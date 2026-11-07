@@ -71,6 +71,8 @@ Categories say **what** money was spent on; accounts say **where it came from**.
 | RD / savings deposit | Bank → Savings |
 | Wallet top-up | Bank → Wallet |
 | Cash deposit | Cash → Bank |
+| Borrowed from someone | *Borrowed* (system liability account) → Bank; a one-time "Pay back X" Priority item is scheduled on the chosen date and paying it is Bank → *Borrowed* |
+| Lent to someone | Bank → *Lent out* (system asset account, not spendable) with a due-back date in the note; money coming back is *Lent out* → Bank |
 
 **Balance correction:** if real cash in hand doesn't match the app, "Adjust balance" sets the true amount and records the difference as an *Unaccounted* entry, so totals stay honest.
 

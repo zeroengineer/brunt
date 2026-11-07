@@ -331,9 +331,9 @@ class Ledger {
       type: TxType.of(r.type),
       amount: r.amount,
       accountId: r.accountId,
-      accountIsCard: from.type == AccountType.creditCard.code,
+      accountIsCard: AccountType.of(from.type).isLiability,
       toAccountId: r.toAccountId,
-      toIsCard: to?.type == AccountType.creditCard.code,
+      toIsCard: to != null && AccountType.of(to.type).isLiability,
     );
     for (final MapEntry(key: id, value: v) in deltas.entries) {
       await db.customUpdate('UPDATE accounts SET balance = balance + ? WHERE id = ?',

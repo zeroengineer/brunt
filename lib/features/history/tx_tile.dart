@@ -27,7 +27,7 @@ class TxTile extends StatelessWidget {
     final acc = accounts.byId(tx.accountId);
     final to = accounts.byId(tx.toAccountId);
     final via = accounts.byId(tx.viaUpiId);
-    final cardSpend = acc?.type == AccountType.creditCard.code && type == TxType.expense;
+    final cardSpend = acc != null && AccountType.of(acc.type).isLiability && type == TxType.expense;
 
     final title = tx.note?.isNotEmpty == true ? tx.note! : (cat?.name ?? (type == TxType.transfer ? 'Transfer' : 'Entry'));
     final where = switch (type) {

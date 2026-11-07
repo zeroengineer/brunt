@@ -15,6 +15,7 @@ A private, fully offline monthly money planner for Android (Flutter). See
 - **Money stack** — Priority → Savings → Fixed bills → Daily → Variable, visualised as a ring.
 - **Accounts** — cash, bank, UPI (linked to a bank), wallets, credit cards (statement → bill cycle), savings.
 - **Daily log** — ✓ as usual / edit / skip, with per-day account override, in two taps.
+- **Transfers with presets** — ATM withdrawal, card bill, savings deposit, **Borrowed** (money in from someone; "Pay back X" is scheduled in Plan on the date you choose) and **Lent** (money out to someone, parked under Lent out with a due-back date).
 - **Security** — SQLCipher AES-256 DB, Argon2id PIN-wrapped key + biometric-gated key, auto-lock,
   PIN backoff, optional wipe, FLAG_SECURE, no INTERNET permission, no cloud backup.
 - **Encrypted backups** — Argon2id + AES-256-GCM with checksum, made in a background isolate.

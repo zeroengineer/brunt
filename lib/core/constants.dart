@@ -26,7 +26,13 @@ enum AccountType {
   upi('upi', 'UPI'),
   wallet('wallet', 'Wallet'),
   creditCard('credit_card', 'Credit card'),
-  savings('savings', 'Savings');
+  savings('savings', 'Savings'),
+
+  /// Money borrowed from someone (system account, balance = what you still owe).
+  loan('loan', 'Borrowed'),
+
+  /// Money lent to someone (system account, balance = what is owed to you).
+  lent('lent', 'Lent out');
 
   const AccountType(this.code, this.label);
   final String code;
@@ -36,6 +42,12 @@ enum AccountType {
 
   bool get holdsBalance => this != upi;
   bool get isCard => this == creditCard;
+
+  /// Balance is an amount owed: spends/borrowing raise it, payments lower it.
+  bool get isLiability => this == creditCard || this == loan;
+
+  /// Created by BRUNT on demand, never offered in "Add account".
+  bool get isSystem => this == loan || this == lent;
   bool get defaultSpendable => this == cash || this == bank || this == wallet;
 }
 
