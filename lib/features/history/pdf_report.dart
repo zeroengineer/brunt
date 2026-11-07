@@ -6,7 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../../core/dates.dart';
 import '../../core/money.dart';
-import '../../domain/report/csv_report.dart';
+import '../../domain/report/report_row.dart';
 
 /// Month-wise transaction report as a PDF: summary, spend by category, then every entry.
 /// Built with the bundled Manrope so ₹ and Indian names render; fully offline.

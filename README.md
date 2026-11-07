@@ -18,7 +18,7 @@ A private, fully offline monthly money planner for Android (Flutter). See
 - **Security** — SQLCipher AES-256 DB, Argon2id PIN-wrapped key + biometric-gated key, auto-lock,
   PIN backoff, optional wipe, FLAG_SECURE, no INTERNET permission, no cloud backup.
 - **Encrypted backups** — Argon2id + AES-256-GCM with checksum, made in a background isolate.
-- **Reports** — month-wise PDF or CSV statement of your entries, with the History filters applied.
+- **Reports** — month-wise PDF statement of your entries, with the History filters applied.
 
 ## Tested on a device
 

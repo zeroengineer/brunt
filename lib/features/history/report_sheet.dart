@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +8,6 @@ import '../../core/dates.dart';
 import '../../data/db/database.dart';
 import '../../data/repositories/queries.dart';
 import '../../design/design.dart';
-import '../../domain/report/csv_report.dart';
 import '../../security/reauth.dart';
 import '../common/export_file.dart';
 import 'pdf_report.dart';
@@ -31,7 +28,6 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
   List<MonthRow>? _months;
   int? _monthId; // null = all months
   bool _useFilters = true;
-  bool _pdf = true;
   bool _busy = false;
 
   @override
@@ -54,7 +50,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
   Future<void> _export() async {
     final s = ref.read(sessionProvider);
     if (s == null) return;
-    if (!await reauthenticate(context, ref, reason: 'Confirm to export a plain-text report')) return;
+    if (!await reauthenticate(context, ref, reason: 'Confirm to export a report')) return;
     setState(() => _busy = true);
     try {
       final base = _useFilters ? widget.filter : const HistoryFilter();
@@ -63,24 +59,18 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
       final ym = _months?.where((m) => m.id == _monthId).firstOrNull?.yearMonth;
       final filtered = _useFilters && !widget.filter.isEmpty;
       final stem = 'brunt-${ym ?? 'all-months'}${filtered ? '-filtered' : ''}';
-      final Uint8List bytes;
-      if (_pdf) {
-        bytes = await PdfReport.build(
-          rows,
-          title: ym == null ? 'All months' : Dates.monthLabel(ym),
-          subtitle: filtered ? 'Filtered: ${activeFilterLabels().join(' · ')}' : 'Transaction report',
-        );
-      } else {
-        // UTF-8 BOM so Excel reads ₹ and non-ASCII names correctly
-        bytes = Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(CsvReport.build(rows))]);
-      }
+      final bytes = await PdfReport.build(
+        rows,
+        title: ym == null ? 'All months' : Dates.monthLabel(ym),
+        subtitle: filtered ? 'Filtered: ${activeFilterLabels().join(' · ')}' : 'Transaction report',
+      );
       if (!mounted) return;
       Navigator.pop(context);
       await saveOrShare(context, ref,
           bytes: bytes,
-          fileName: '$stem.${_pdf ? 'pdf' : 'csv'}',
-          mimeType: _pdf ? 'application/pdf' : 'text/csv',
-          title: '${rows.length} entries · ${_pdf ? 'PDF' : 'CSV'}');
+          fileName: '$stem.pdf',
+          mimeType: 'application/pdf',
+          title: '${rows.length} entries · PDF');
     } catch (e) {
       if (mounted) toast(context, 'Could not build report: $e', error: true);
     } finally {
@@ -106,13 +96,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('Export report', style: BText.h2),
       const SizedBox(height: 4),
-      const Text('Month-wise statement of your entries. The file is not encrypted — share it carefully.', style: BText.caption),
-      const SizedBox(height: 16),
-      SegmentTabs(
-        items: const [SegmentItem('PDF'), SegmentItem('CSV (spreadsheet)')],
-        selected: _pdf ? 0 : 1,
-        onChanged: (i) => setState(() => _pdf = i == 0),
-      ),
+      const Text('Month-wise PDF statement of your entries. The file is not encrypted — share it carefully.', style: BText.caption),
       const SizedBox(height: 16),
       const Text('Month', style: BText.caption),
       const SizedBox(height: 8),
@@ -138,7 +122,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
         ),
       ],
       const SizedBox(height: 20),
-      PillButton(label: _pdf ? 'Export PDF' : 'Export CSV', icon: LucideIcons.download, expand: true, busy: _busy, onPressed: _export),
+      PillButton(label: 'Export PDF', icon: LucideIcons.download, expand: true, busy: _busy, onPressed: _export),
     ]);
   }
 }

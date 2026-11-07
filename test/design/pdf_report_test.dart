@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:brunt/domain/report/csv_report.dart';
+import 'package:brunt/domain/report/report_row.dart';
 import 'package:brunt/features/history/pdf_report.dart';
 import 'package:flutter_test/flutter_test.dart';
 

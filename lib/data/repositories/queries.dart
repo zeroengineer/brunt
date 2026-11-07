@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../core/constants.dart';
 import '../../core/money.dart';
-import '../../domain/report/csv_report.dart';
+import '../../domain/report/report_row.dart';
 import '../db/database.dart';
 
 class HistoryFilter {
