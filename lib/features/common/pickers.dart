@@ -1,0 +1,161 @@
+import 'package:flutter/material.dart';
+
+import '../../core/constants.dart';
+import '../../core/dates.dart';
+import '../../core/money.dart';
+import '../../data/db/database.dart';
+import '../../design/design.dart';
+
+Color accountColor(AccountRow a) => BColors.fromHex(a.color, fallback: switch (AccountType.of(a.type)) {
+      AccountType.cash => BColors.success,
+      AccountType.bank => BColors.primaryLight,
+      AccountType.upi => BColors.primarySoft,
+      AccountType.wallet => BColors.warning,
+      AccountType.creditCard => BColors.danger,
+      AccountType.savings => BColors.tierSavings,
+    });
+
+IconData accountIcon(AccountRow a) => BIcons.of(a.icon ?? BIcons.defaultForAccount(AccountType.of(a.type)));
+
+Color categoryColor(CategoryRow c) => BColors.fromHex(c.color, fallback: BColors.tier(Tier.of(c.tier)) == BColors.tierVariable
+    ? BColors.textMuted
+    : BColors.tier(Tier.of(c.tier)));
+
+IconData categoryIcon(CategoryRow c) => BIcons.of(c.icon, fallback: BIcons.tier(Tier.of(c.tier)));
+
+/// Account pills for every entry sheet. Cards show available limit; others the balance.
+List<ChoiceItem<int>> accountItems(Iterable<AccountRow> accounts, {bool showBalance = true}) => [
+      for (final a in accounts)
+        ChoiceItem(
+          a.id,
+          a.name,
+          icon: accountIcon(a),
+          color: accountColor(a),
+          sub: !showBalance || a.type == AccountType.upi.code
+              ? null
+              : (a.type == AccountType.creditCard.code ? 'due ${Money.compact(a.balance)}' : Money.compact(a.balance)),
+        ),
+    ];
+
+String accountSubtitle(AccountRow a, List<AccountRow> all) {
+  final t = AccountType.of(a.type);
+  if (t == AccountType.upi) {
+    final bank = all.where((x) => x.id == a.linkedAccountId).firstOrNull;
+    return 'UPI · via ${bank?.name ?? '—'}';
+  }
+  if (t == AccountType.creditCard) {
+    final limit = a.creditLimit;
+    return limit == null ? 'Credit card' : 'Available ${Money.format(limit - a.balance)} of ${Money.compact(limit)}';
+  }
+  return '${t.label}${a.includeInSpendable ? '' : ' · protected'}';
+}
+
+Future<DateTime?> pickDay(BuildContext context, {required DateTime initial, DateTime? first, DateTime? last}) {
+  final today = Dates.day(DateTime.now());
+  return showDatePicker(
+    context: context,
+    initialDate: initial,
+    firstDate: first ?? DateTime(today.year - 3),
+    lastDate: last ?? today,
+    builder: (ctx, child) => Theme(
+      data: Theme.of(ctx).copyWith(
+        colorScheme: const ColorScheme.dark(
+            primary: BColors.primary, onPrimary: BColors.text, surface: BColors.surface, onSurface: BColors.text),
+      ),
+      child: child!,
+    ),
+  );
+}
+
+/// Picks a year-month ('2027-03') from the next/previous few years. Returns '' for "none".
+Future<String?> pickYearMonth(BuildContext context, {String? current, bool allowNone = true}) {
+  final now = DateTime.now();
+  final options = [for (var i = -12; i <= 60; i++) Dates.yearMonth(DateTime(now.year, now.month + i))];
+  return showBruntSheet<String>(
+    context,
+    scrollable: false,
+    builder: (ctx) => SizedBox(
+      height: 420,
+      child: ListView(children: [
+        if (allowNone)
+          ListTile(title: const Text('No limit'), onTap: () => Navigator.pop(ctx, ''), trailing: current == null ? const Icon(Icons.check) : null),
+        for (final ym in options)
+          ListTile(
+            title: Text(Dates.monthLabel(ym), style: BText.body),
+            trailing: ym == current ? const Icon(Icons.check, color: BColors.primaryLight) : null,
+            onTap: () => Navigator.pop(ctx, ym),
+          ),
+      ]),
+    ),
+  );
+}
+
+/// Grid of icons for accounts/categories.
+class IconPicker extends StatelessWidget {
+  const IconPicker({super.key, required this.selected, required this.onChanged, required this.color});
+  final String? selected;
+  final ValueChanged<String> onChanged;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(spacing: 8, runSpacing: 8, children: [
+      for (final e in BIcons.byKey.entries)
+        Semantics(
+          label: e.key,
+          selected: e.key == selected,
+          button: true,
+          child: GestureDetector(
+            onTap: () => onChanged(e.key),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: e.key == selected ? color.withValues(alpha: 0.25) : BColors.surfaceRaised,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: e.key == selected ? color : BColors.border),
+              ),
+              child: Icon(e.value, size: 20, color: e.key == selected ? color : BColors.textMuted),
+            ),
+          ),
+        ),
+    ]);
+  }
+}
+
+class ColorPicker extends StatelessWidget {
+  const ColorPicker({super.key, required this.selected, required this.onChanged});
+  final Color? selected;
+  final ValueChanged<Color> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(spacing: 10, runSpacing: 10, children: [
+      for (final c in BColors.palette)
+        Semantics(
+          label: 'Colour ${BColors.hex(c)}',
+          selected: c == selected,
+          button: true,
+          child: GestureDetector(
+            onTap: () => onChanged(c),
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: c,
+                shape: BoxShape.circle,
+                border: Border.all(color: c == selected ? BColors.text : Colors.transparent, width: 2.5),
+              ),
+            ),
+          ),
+        ),
+    ]);
+  }
+}
+
+String rupeesText(int paise) {
+  if (paise == 0) return '';
+  final r = paise ~/ 100;
+  final p = paise % 100;
+  return p == 0 ? '$r' : '$r.${p.toString().padLeft(2, '0')}';
+}
