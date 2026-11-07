@@ -15,6 +15,7 @@ import '../../security/lock_controller.dart';
 import '../../security/reauth.dart';
 import '../../security/screen_guard.dart';
 import '../common/pickers.dart';
+import '../history/report_sheet.dart';
 import 'backup_flow.dart';
 import 'notifications.dart';
 
@@ -246,6 +247,7 @@ class SettingsScreen extends ConsumerWidget {
           _Group(children: [
             _Tile(icon: LucideIcons.download, title: 'Export encrypted backup', onTap: () => exportBackup(context, ref)),
             _Tile(icon: LucideIcons.upload, title: 'Restore from backup', onTap: () => restoreBackup(context, ref)),
+            _Tile(icon: LucideIcons.fileText, title: 'Export transaction report', value: 'PDF or CSV, month-wise', onTap: () => showReportSheet(context)),
             _Tile(
               icon: LucideIcons.shieldCheck,
               title: 'Verify balances',

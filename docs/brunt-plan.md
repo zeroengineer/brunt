@@ -206,7 +206,7 @@ salary_part  = received salary OR expected salary
 projected_end = balance_now + (salary not yet received ? salary_part : 0)
                 − committed_left − daily_left − variable_left
 
-safe_per_day = (balance_now + pending salary − committed_left − variable_left) / days_left
+safe_per_day = max(0, projected_end) / days_left   -- i.e. after bills, daily costs and variable budget
 ```
 
 **Status:**

@@ -201,9 +201,9 @@ abstract final class ProjectionEngine {
     if (daysLeft < 1) daysLeft = 1;
 
     final projectedEnd = balanceNow + pendingSalary - committedLeft - dailyLeft - variableLeft;
-    final perDayPool = balanceNow + pendingSalary - committedLeft - variableLeft;
-    // whole rupees: paise noise is meaningless for a daily budget
-    final safePerDay = perDayPool <= 0 ? 0 : (perDayPool ~/ daysLeft) ~/ 100 * 100;
+    // What is free per day *beyond* the planned daily costs, bills and variable budget —
+    // i.e. the projected month-end surplus spread over the remaining days. Whole rupees.
+    final safePerDay = projectedEnd <= 0 ? 0 : (projectedEnd ~/ daysLeft) ~/ 100 * 100;
 
     final threshold = Money.percent(i.salaryExpected, i.comfortPct);
     final status = projectedEnd < 0

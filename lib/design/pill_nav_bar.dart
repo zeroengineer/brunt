@@ -38,7 +38,6 @@ class PillNavBar extends StatelessWidget {
           child: Row(children: [
             for (var i = 0; i < items.length; i++)
               Expanded(
-                flex: i == selected ? 9 : 5,
                 child: Semantics(
                   selected: i == selected,
                   button: true,
@@ -47,23 +46,19 @@ class PillNavBar extends StatelessWidget {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => onChanged(i),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      decoration: BoxDecoration(
-                        color: i == selected ? BColors.primary : Colors.transparent,
-                        borderRadius: BorderRadius.circular(BRadius.pill),
+                    child: Center(
+                      // reference: the active tab is a compact blue pill around the icon
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        width: i == selected ? 58 : 44,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: i == selected ? BColors.primary : Colors.transparent,
+                          borderRadius: BorderRadius.circular(BRadius.pill),
+                        ),
+                        child: Icon(items[i].icon, size: 22, color: i == selected ? BColors.text : BColors.textMuted),
                       ),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(items[i].icon, size: 21, color: i == selected ? BColors.text : BColors.textMuted),
-                        if (i == selected) ...[
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(items[i].label,
-                                overflow: TextOverflow.clip, softWrap: false, style: BText.label.copyWith(fontSize: 13)),
-                          ),
-                        ],
-                      ]),
                     ),
                   ),
                 ),

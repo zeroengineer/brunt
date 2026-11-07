@@ -2,16 +2,28 @@ import 'package:drift/drift.dart';
 
 import '../../core/constants.dart';
 import '../../core/money.dart';
+import '../../domain/report/csv_report.dart';
 import '../db/database.dart';
 
 class HistoryFilter {
-  const HistoryFilter({this.categoryId, this.accountId, this.type, this.search});
+  const HistoryFilter({this.categoryId, this.accountId, this.type, this.search, this.monthId});
   final int? categoryId;
   final int? accountId;
   final TxType? type;
   final String? search;
+  final int? monthId;
 
-  bool get isEmpty => categoryId == null && accountId == null && type == null && (search == null || search!.isEmpty);
+  bool get isEmpty =>
+      categoryId == null && accountId == null && type == null && monthId == null && (search == null || search!.isEmpty);
+
+  HistoryFilter copyWith({int? categoryId, int? accountId, TxType? type, String? search, int? monthId, bool clearCategory = false, bool clearAccount = false, bool clearType = false, bool clearMonth = false}) =>
+      HistoryFilter(
+        categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
+        accountId: clearAccount ? null : (accountId ?? this.accountId),
+        type: clearType ? null : (type ?? this.type),
+        search: search ?? this.search,
+        monthId: clearMonth ? null : (monthId ?? this.monthId),
+      );
 }
 
 class HistoryCursor {
@@ -157,13 +169,12 @@ class Queries {
     return out;
   }
 
-  /// Keyset-paginated history (`WHERE (date,id) < cursor LIMIT n`), newest first.
-  Future<List<TxRow>> historyPage({HistoryCursor? after, HistoryFilter filter = const HistoryFilter(), int limit = 50}) async {
+  (List<String>, List<Variable<Object>>) _filterSql(HistoryFilter filter) {
     final where = <String>[];
     final vars = <Variable<Object>>[];
-    if (after != null) {
-      where.add('(t.date < ? OR (t.date = ? AND t.id < ?))');
-      vars.addAll([Variable.withString(after.date), Variable.withString(after.date), Variable.withInt(after.id)]);
+    if (filter.monthId != null) {
+      where.add('t.month_id = ?');
+      vars.add(Variable.withInt(filter.monthId!));
     }
     if (filter.categoryId != null) {
       where.add('t.category_id = ?');
@@ -181,6 +192,45 @@ class Queries {
       final s = '%${filter.search!.trim().replaceAll('%', r'\%').replaceAll('_', r'\_')}%';
       where.add(r"(t.note LIKE ? ESCAPE '\' OR c.name LIKE ? ESCAPE '\')");
       vars.addAll([Variable.withString(s), Variable.withString(s)]);
+    }
+    return (where, vars);
+  }
+
+  /// Rows for a CSV report, oldest first, with names joined in.
+  Future<List<ReportRow>> reportRows(HistoryFilter filter) async {
+    final (where, vars) = _filterSql(filter);
+    final sql = 'SELECT t.date, m.year_month AS ym, t.type, t.amount, t.note, c.name AS cat, '
+        'a.name AS acc, v.name AS via, b.name AS toacc FROM transactions t '
+        'JOIN months m ON m.id = t.month_id '
+        'LEFT JOIN categories c ON c.id = t.category_id '
+        'LEFT JOIN accounts a ON a.id = t.account_id '
+        'LEFT JOIN accounts v ON v.id = t.via_upi_id '
+        'LEFT JOIN accounts b ON b.id = t.to_account_id '
+        '${where.isEmpty ? '' : 'WHERE ${where.join(' AND ')} '}'
+        'ORDER BY t.date ASC, t.id ASC';
+    final rows = await db.customSelect(sql, variables: vars, readsFrom: {db.transactions, db.months, db.categories, db.accounts}).get();
+    return [
+      for (final r in rows)
+        ReportRow(
+          date: r.read<String>('date'),
+          month: r.read<String>('ym'),
+          type: r.read<String>('type'),
+          amount: r.read<int>('amount'),
+          note: r.readNullable<String>('note'),
+          category: r.readNullable<String>('cat'),
+          account: r.readNullable<String>('acc'),
+          via: r.readNullable<String>('via'),
+          toAccount: r.readNullable<String>('toacc'),
+        ),
+    ];
+  }
+
+  /// Keyset-paginated history (`WHERE (date,id) < cursor LIMIT n`), newest first.
+  Future<List<TxRow>> historyPage({HistoryCursor? after, HistoryFilter filter = const HistoryFilter(), int limit = 50}) async {
+    final (where, vars) = _filterSql(filter);
+    if (after != null) {
+      where.add('(t.date < ? OR (t.date = ? AND t.id < ?))');
+      vars.addAll([Variable.withString(after.date), Variable.withString(after.date), Variable.withInt(after.id)]);
     }
     final sql = 'SELECT t.* FROM transactions t LEFT JOIN categories c ON c.id = t.category_id '
         '${where.isEmpty ? '' : 'WHERE ${where.join(' AND ')} '}'

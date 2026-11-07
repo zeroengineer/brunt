@@ -44,6 +44,7 @@ class _PagedTxListState extends ConsumerState<PagedTxList> {
     if (old.filter.categoryId != widget.filter.categoryId ||
         old.filter.accountId != widget.filter.accountId ||
         old.filter.type != widget.filter.type ||
+        old.filter.monthId != widget.filter.monthId ||
         old.filter.search != widget.filter.search) {
       unawaited(_reload());
     }

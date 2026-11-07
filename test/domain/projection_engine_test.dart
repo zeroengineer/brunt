@@ -64,7 +64,7 @@ void main() {
     expect(p.projectedEnd, 2300000 + 5000000 - 2000000 - 120000 - 500000);
     expect(p.status, MonthStatus.comfortable);
     expect(p.daysLeft, 30);
-    expect(p.safePerDay, ((2300000 + 5000000 - 2000000 - 500000) ~/ 30) ~/ 100 * 100);
+    expect(p.safePerDay, ((2300000 + 5000000 - 2000000 - 120000 - 500000) ~/ 30) ~/ 100 * 100);
   });
 
   test('salary already received is not double counted', () {

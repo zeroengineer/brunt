@@ -4,11 +4,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/providers.dart';
 import '../../core/constants.dart';
+import '../../core/dates.dart';
 import '../../data/db/database.dart';
 import '../../data/repositories/queries.dart';
 import '../../design/design.dart';
 import '../common/pickers.dart';
 import 'paged_tx_list.dart';
+import 'report_sheet.dart';
 
 /// History (spec §11.5 #8): paginated, search + filter by category, account and type.
 class HistoryScreen extends ConsumerStatefulWidget {
@@ -32,12 +34,23 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   Future<void> _openFilters() async {
     final accounts = ref.read(allAccountsProvider).value ?? const <AccountRow>[];
     final cats = ref.read(categoriesProvider).value ?? const <CategoryRow>[];
+    final months = (await ref.read(sessionProvider)?.queries.months() ?? const <MonthRow>[]).reversed.toList();
+    if (!mounted) return;
     var f = _filter;
     final applied = await showBruntSheet<HistoryFilter>(
       context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Filter', style: BText.h2),
+          const SizedBox(height: 16),
+          const Text('Month', style: BText.caption),
+          const SizedBox(height: 8),
+          ChoicePills<int>(
+            wrap: true,
+            items: [const ChoiceItem(-1, 'All'), for (final m in months) ChoiceItem(m.id, Dates.monthLabel(m.yearMonth))],
+            selected: f.monthId ?? -1,
+            onChanged: (v) => set(() => f = f.copyWith(monthId: v == -1 ? null : v, clearMonth: v == -1)),
+          ),
           const SizedBox(height: 16),
           const Text('Type', style: BText.caption),
           const SizedBox(height: 8),
@@ -52,8 +65,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ChoiceItem('adjustment', 'Adjustments'),
             ],
             selected: f.type?.code ?? '',
-            onChanged: (v) => set(() => f = HistoryFilter(
-                categoryId: f.categoryId, accountId: f.accountId, search: f.search, type: v.isEmpty ? null : TxType.of(v))),
+            onChanged: (v) => set(() => f = f.copyWith(type: v.isEmpty ? null : TxType.of(v), clearType: v.isEmpty)),
           ),
           const SizedBox(height: 16),
           const Text('Account', style: BText.caption),
@@ -62,8 +74,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             wrap: true,
             items: [const ChoiceItem(-1, 'All'), ...accountItems(accounts, showBalance: false)],
             selected: f.accountId ?? -1,
-            onChanged: (v) => set(() => f = HistoryFilter(
-                categoryId: f.categoryId, type: f.type, search: f.search, accountId: v == -1 ? null : v)),
+            onChanged: (v) => set(() => f = f.copyWith(accountId: v == -1 ? null : v, clearAccount: v == -1)),
           ),
           const SizedBox(height: 16),
           const Text('Category', style: BText.caption),
@@ -72,8 +83,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             wrap: true,
             items: [const ChoiceItem(-1, 'All'), for (final c in cats) ChoiceItem(c.id, c.name, icon: categoryIcon(c))],
             selected: f.categoryId ?? -1,
-            onChanged: (v) => set(() => f = HistoryFilter(
-                accountId: f.accountId, type: f.type, search: f.search, categoryId: v == -1 ? null : v)),
+            onChanged: (v) => set(() => f = f.copyWith(categoryId: v == -1 ? null : v, clearCategory: v == -1)),
           ),
           const SizedBox(height: 22),
           Row(children: [
@@ -96,7 +106,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final active = _filter.categoryId != null || _filter.accountId != null || _filter.type != null;
+    final active = _filter.categoryId != null || _filter.accountId != null || _filter.type != null || _filter.monthId != null;
     final body = Column(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(BSpace.gutter, 4, BSpace.gutter, 4),
@@ -106,12 +116,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               controller: _search,
               style: BText.body,
               textInputAction: TextInputAction.search,
-              onSubmitted: (v) => setState(() => _filter = HistoryFilter(
-                  categoryId: _filter.categoryId, accountId: _filter.accountId, type: _filter.type, search: v)),
+              onSubmitted: (v) => setState(() => _filter = _filter.copyWith(search: v)),
               onChanged: (v) {
-                if (v.isEmpty) {
-                  setState(() => _filter = HistoryFilter(categoryId: _filter.categoryId, accountId: _filter.accountId, type: _filter.type));
-                }
+                if (v.isEmpty) setState(() => _filter = _filter.copyWith(search: ''));
               },
               decoration: InputDecoration(
                 isDense: true,
@@ -123,6 +130,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(BRadius.pill), borderSide: BorderSide.none),
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+          IconButton.filled(
+            tooltip: 'Export report',
+            style: IconButton.styleFrom(backgroundColor: BColors.surface),
+            onPressed: () => showReportSheet(context, filter: _filter),
+            icon: const Icon(LucideIcons.download, size: 18, color: BColors.text),
           ),
           const SizedBox(width: 8),
           IconButton.filled(

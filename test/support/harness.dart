@@ -3,6 +3,7 @@ import 'package:brunt/data/db/database.dart';
 import 'package:brunt/data/repositories/catalog_repo.dart';
 import 'package:brunt/data/repositories/ledger.dart';
 import 'package:brunt/data/repositories/month_engine.dart';
+import 'package:brunt/data/repositories/queries.dart';
 import 'package:brunt/data/repositories/settings_repo.dart';
 import 'package:brunt/data/repositories/stats_repo.dart';
 import 'package:drift/drift.dart' show Value;
@@ -15,6 +16,7 @@ class Harness {
     settings = SettingsRepo(db);
     ledger = Ledger(db, clock: () => now);
     stats = StatsRepo(db, clock: () => now);
+    queries = Queries(db);
     engine = MonthEngine(db, ledger, settings, stats);
     catalog = CatalogRepo(db, ledger, engine, clock: () => now);
   }
@@ -24,6 +26,7 @@ class Harness {
   late final SettingsRepo settings;
   late final Ledger ledger;
   late final StatsRepo stats;
+  late final Queries queries;
   late final MonthEngine engine;
   late final CatalogRepo catalog;
 
