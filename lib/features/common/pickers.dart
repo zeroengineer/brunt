@@ -90,7 +90,7 @@ Future<String?> pickYearMonth(BuildContext context, {String? current, bool allow
   );
 }
 
-/// Grid of icons for accounts/categories.
+/// Two-row horizontally scrolling strip of icons for accounts/categories.
 class IconPicker extends StatelessWidget {
   const IconPicker({super.key, required this.selected, required this.onChanged, required this.color});
   final String? selected;
@@ -99,27 +99,39 @@ class IconPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(spacing: 8, runSpacing: 8, children: [
-      for (final e in BIcons.byKey.entries)
-        Semantics(
-          label: e.key,
-          selected: e.key == selected,
-          button: true,
-          child: GestureDetector(
-            onTap: () => onChanged(e.key),
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: e.key == selected ? color.withValues(alpha: 0.25) : BColors.surfaceRaised,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: e.key == selected ? color : BColors.border),
+    final keys = BIcons.byKey.keys.toList();
+    // keep the selected icon in view
+    final i = keys.indexOf(selected ?? '');
+    return SizedBox(
+      height: 42 * 2 + 8,
+      child: GridView.builder(
+        scrollDirection: Axis.horizontal,
+        controller: ScrollController(initialScrollOffset: i < 4 ? 0 : (i ~/ 2 - 1) * 50.0),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1),
+        itemCount: keys.length,
+        itemBuilder: (_, n) {
+          final key = keys[n];
+          final sel = key == selected;
+          return Semantics(
+            label: key,
+            selected: sel,
+            button: true,
+            child: GestureDetector(
+              onTap: () => onChanged(key),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: sel ? color.withValues(alpha: 0.25) : BColors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: sel ? color : BColors.border),
+                ),
+                child: Icon(BIcons.byKey[key], size: 20, color: sel ? color : BColors.textMuted),
               ),
-              child: Icon(e.value, size: 20, color: e.key == selected ? color : BColors.textMuted),
             ),
-          ),
-        ),
-    ]);
+          );
+        },
+      ),
+    );
   }
 }
 

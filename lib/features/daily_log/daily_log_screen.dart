@@ -279,17 +279,17 @@ class _DailyTile extends StatelessWidget {
           const SizedBox(height: 12),
           if (state == null)
             Row(children: [
-              Expanded(child: PillButton(label: 'As usual', icon: LucideIcons.check, dense: true, onPressed: onConfirm)),
+              Expanded(flex: 5, child: PillButton(label: 'As usual', icon: LucideIcons.check, dense: true, expand: true, onPressed: onConfirm)),
               const SizedBox(width: 8),
-              Expanded(child: PillButton(label: 'Edit', icon: LucideIcons.pencil, dense: true, variant: PillVariant.outline, onPressed: onEdit)),
+              Expanded(flex: 3, child: PillButton(label: 'Edit', dense: true, expand: true, variant: PillVariant.outline, onPressed: onEdit)),
               const SizedBox(width: 8),
-              Expanded(child: PillButton(label: 'Skip', dense: true, variant: PillVariant.soft, onPressed: onSkip)),
+              Expanded(flex: 3, child: PillButton(label: 'Skip', dense: true, expand: true, variant: PillVariant.soft, onPressed: onSkip)),
             ])
           else
             Row(children: [
-              Expanded(child: PillButton(label: 'Change', icon: LucideIcons.pencil, dense: true, variant: PillVariant.soft, onPressed: onEdit)),
+              Expanded(child: PillButton(label: 'Change', icon: LucideIcons.pencil, dense: true, expand: true, variant: PillVariant.soft, onPressed: onEdit)),
               const SizedBox(width: 8),
-              Expanded(child: PillButton(label: 'Undo', icon: LucideIcons.undo2, dense: true, variant: PillVariant.outline, onPressed: onUndo)),
+              Expanded(child: PillButton(label: 'Undo', icon: LucideIcons.undo2, dense: true, expand: true, variant: PillVariant.outline, onPressed: onUndo)),
             ]),
         ]),
       ),

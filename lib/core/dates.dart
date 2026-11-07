@@ -92,6 +92,11 @@ abstract final class WeekMask {
     if (mask == all) return 'Every day';
     if (mask == weekdays) return 'Mon–Fri';
     if (mask == 0) return 'No days';
-    return [for (var w = 1; w <= 7; w++) if (has(mask, w)) Dates.weekdayShort[w - 1]].join(', ');
+    final days = [for (var w = 1; w <= 7; w++) if (has(mask, w)) w];
+    // one contiguous run (e.g. Mon–Sat) reads better as a range
+    if (days.length >= 3 && days.last - days.first == days.length - 1) {
+      return '${Dates.weekdayShort[days.first - 1]}–${Dates.weekdayShort[days.last - 1]}';
+    }
+    return days.map((w) => Dates.weekdayShort[w - 1]).join(', ');
   }
 }

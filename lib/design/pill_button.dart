@@ -95,7 +95,7 @@ class _PillButtonState extends State<PillButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: h,
-          padding: EdgeInsets.symmetric(horizontal: widget.dense ? 14 : 22),
+          padding: EdgeInsets.symmetric(horizontal: widget.dense ? 10 : 22),
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(BRadius.pill),

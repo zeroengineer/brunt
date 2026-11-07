@@ -38,10 +38,24 @@ class AppShell extends StatelessWidget {
             ),
           ),
         ),
-        bottomNavigationBar: PillNavBar(
-          items: _items,
-          selected: shell.currentIndex,
-          onChanged: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        bottomNavigationBar: DecoratedBox(
+          // content scrolling under the floating nav fades out instead of showing through
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x00000000), Color(0xE6000000), Color(0xFF000000)],
+              stops: [0, 0.45, 1],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 28),
+            child: PillNavBar(
+              items: _items,
+              selected: shell.currentIndex,
+              onChanged: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+            ),
+          ),
         ),
       ),
     );

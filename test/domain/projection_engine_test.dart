@@ -64,7 +64,7 @@ void main() {
     expect(p.projectedEnd, 2300000 + 5000000 - 2000000 - 120000 - 500000);
     expect(p.status, MonthStatus.comfortable);
     expect(p.daysLeft, 30);
-    expect(p.safePerDay, (2300000 + 5000000 - 2000000 - 500000) ~/ 30);
+    expect(p.safePerDay, ((2300000 + 5000000 - 2000000 - 500000) ~/ 30) ~/ 100 * 100);
   });
 
   test('salary already received is not double counted', () {
@@ -126,9 +126,9 @@ void main() {
     ));
     expect(p.gap, isNotNull);
     expect(p.gap!.gapDays, 6);
-    expect(p.gap!.need, 6 * 4000 + 30000);
+    expect(p.gap!.need, 7 * 4000 + 30000); // 1st..7th inclusive
     expect(p.gap!.ok, isFalse);
-    expect(p.gap!.shortBy, 6 * 4000 + 30000 - 20000);
+    expect(p.gap!.shortBy, 7 * 4000 + 30000 - 20000);
   });
 
   test('salary later than ever is flagged', () {

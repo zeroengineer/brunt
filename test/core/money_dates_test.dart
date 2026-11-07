@@ -52,6 +52,8 @@ void main() {
       expect(WeekMask.has(WeekMask.all, DateTime.sunday), isTrue);
       expect(WeekMask.has(WeekMask.toggle(WeekMask.all, 7), 7), isFalse);
       expect(WeekMask.describe(WeekMask.weekdays), 'Mon–Fri');
+      expect(WeekMask.describe(63), 'Mon–Sat');
+      expect(WeekMask.describe(1 | 4 | 16), 'Mon, Wed, Fri');
     });
     test('ordinals', () {
       expect(Dates.ordinal(1), '1st');

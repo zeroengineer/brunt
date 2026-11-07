@@ -202,7 +202,8 @@ abstract final class ProjectionEngine {
 
     final projectedEnd = balanceNow + pendingSalary - committedLeft - dailyLeft - variableLeft;
     final perDayPool = balanceNow + pendingSalary - committedLeft - variableLeft;
-    final safePerDay = perDayPool <= 0 ? 0 : perDayPool ~/ daysLeft;
+    // whole rupees: paise noise is meaningless for a daily budget
+    final safePerDay = perDayPool <= 0 ? 0 : (perDayPool ~/ daysLeft) ~/ 100 * 100;
 
     final threshold = Money.percent(i.salaryExpected, i.comfortPct);
     final status = projectedEnd < 0
@@ -216,8 +217,8 @@ abstract final class ProjectionEngine {
       final latest = i.latestSalaryDay ?? i.usualSalaryDay;
       if (latest != null) {
         final until = Dates.clampDay(monthStart.year, monthStart.month, latest);
-        final beyond = !until.isAfter(today);
-        final end = beyond ? today.add(const Duration(days: 1)) : until;
+        final beyond = until.isBefore(today);
+        final end = beyond ? today.add(const Duration(days: 1)) : until.add(const Duration(days: 1));
         final gapDaily = unlogged
             .where((e) => e.$1.isBefore(end) && hitsSpendable(e.$2.accountId))
             .fold<int>(0, (s, e) => s + e.$2.amount);

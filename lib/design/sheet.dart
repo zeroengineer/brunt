@@ -6,13 +6,19 @@ import 'tokens.dart';
 Future<T?> showBruntSheet<T>(BuildContext context, {required WidgetBuilder builder, bool scrollable = true}) {
   return showModalBottomSheet<T>(
     context: context,
+    // always above the shell's FAB and nav bar, whichever tab opened it
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: BColors.surface,
     barrierColor: Colors.black.withValues(alpha: 0.6),
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(BRadius.sheet))),
     builder: (ctx) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+      // keyboard when open, otherwise the system nav bar (edge-to-edge)
+      padding: EdgeInsets.only(
+        bottom: [MediaQuery.viewInsetsOf(ctx).bottom, MediaQuery.viewPaddingOf(ctx).bottom]
+            .reduce((a, b) => a > b ? a : b),
+      ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const SizedBox(height: 10),
         Container(width: 40, height: 4, decoration: BoxDecoration(color: BColors.borderStrong, borderRadius: BorderRadius.circular(2))),
@@ -31,6 +37,7 @@ Future<bool> confirmDialog(BuildContext context,
     {required String title, required String message, String confirm = 'Confirm', bool danger = false}) async {
   final r = await showDialog<bool>(
     context: context,
+    useRootNavigator: true,
     builder: (ctx) => AlertDialog(
       backgroundColor: BColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BRadius.card)),

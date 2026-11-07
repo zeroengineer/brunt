@@ -47,9 +47,9 @@ class _GlowPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // top-right ~420px, bottom-left ~380px (+ blur spread)
-    _glow(canvas, Offset(size.width + 40, -30), 330, 0.42);
-    _glow(canvas, Offset(-60, size.height + 10), 300, 0.36);
-    if (centerGlow) _glow(canvas, Offset(size.width / 2, size.height * 0.38), 220, 0.30);
+    _glow(canvas, Offset(size.width + 30, -20), 340, 0.50);
+    _glow(canvas, Offset(-50, size.height + 20), 310, 0.44);
+    if (centerGlow) _glow(canvas, Offset(size.width / 2, size.height * 0.36), 220, 0.30);
   }
 
   @override
