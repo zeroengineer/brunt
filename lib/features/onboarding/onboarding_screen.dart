@@ -520,6 +520,8 @@ class _TemplatesStep extends ConsumerWidget {
         .where((t) => (t.frequency == Frequency.daily.code) == daily)
         .toList();
     final existingNames = items.map((t) => t.name.toLowerCase()).toSet();
+    final planned = ref.watch(plannedProvider).value ?? const <PlannedRow>[];
+    final today = Dates.day(DateTime.now());
     return Column(children: [
       Expanded(
         child: ListView(padding: const EdgeInsets.fromLTRB(20, 24, 20, 24), children: [
@@ -558,6 +560,38 @@ class _TemplatesStep extends ConsumerWidget {
                 ]),
               ),
             ),
+          // Due day already passed this month? Let the user say it was paid before BRUNT,
+          // instead of showing it as overdue on day one.
+          for (final t in items)
+            if (!daily && t.dueDay != null && t.dueDay! < today.day)
+              Builder(builder: (_) {
+                final p = planned.where((p) => p.templateId == t.id).firstOrNull;
+                if (p == null) return const SizedBox();
+                final done = p.status != PlannedStatus.pending.code;
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+                  child: Row(children: [
+                    Expanded(
+                      child: Text(
+                        done
+                            ? '${t.name}: marked as paid before BRUNT this month'
+                            : '${t.name} was due on the ${Dates.ordinal(t.dueDay!)} — already paid this month?',
+                        style: BText.caption,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    PillButton(
+                      label: done ? 'Undo' : 'Yes, paid',
+                      dense: true,
+                      variant: done ? PillVariant.soft : PillVariant.outline,
+                      onPressed: () => ref
+                          .read(sessionProvider)
+                          ?.ledger
+                          .setPlannedStatus(p.id, done ? PlannedStatus.pending : PlannedStatus.skipped),
+                    ),
+                  ]),
+                );
+              }),
           const SizedBox(height: 8),
           const Text('Suggestions', style: BText.caption),
           const SizedBox(height: 8),

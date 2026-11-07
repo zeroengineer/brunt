@@ -99,7 +99,7 @@ class PlatformBiometricVault implements BiometricVault {
 ///  • by a key derived from the 6-digit PIN with Argon2id, and
 ///  • optionally inside biometric-gated platform storage.
 class KeyManager {
-  KeyManager(this.store, this.vault, {this.params = const KdfParams(), this.useIsolate = true});
+  KeyManager(this.store, this.vault, {this.params = KdfParams.pin, this.useIsolate = true});
 
   final SecretStore store;
   final BiometricVault vault;

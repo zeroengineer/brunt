@@ -63,7 +63,7 @@ void toast(BuildContext context, String message, {bool error = false}) {
       backgroundColor: error ? BColors.danger : BColors.primarySoft,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       duration: const Duration(seconds: 2),
     ));
 }

@@ -10,6 +10,12 @@ import 'package:cryptography/dart.dart';
 class KdfParams {
   const KdfParams({this.memoryKiB = 19456, this.iterations = 2, this.parallelism = 1});
 
+  /// PIN wrapping. Argon2id runs in pure Dart, so on a budget 32-bit phone the
+  /// OWASP 19 MiB setting costs ~3 s per unlock. The PIN key is only one of two
+  /// layers (the other is hardware-backed biometric storage) and PIN guesses are
+  /// rate-limited with optional wipe, so 8 MiB keeps unlock around a second.
+  static const pin = KdfParams(memoryKiB: 8192, iterations: 2, parallelism: 1);
+
   /// Fast parameters for unit tests only.
   static const test = KdfParams(memoryKiB: 64, iterations: 1, parallelism: 1);
 
