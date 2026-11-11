@@ -35,6 +35,10 @@ class MainActivity : FlutterFragmentActivity() {
                         result.success(true)
                     }
                 }
+                "updateWidget" -> {
+                    RingWidget.save(applicationContext, call.arguments as? String ?: "")
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }

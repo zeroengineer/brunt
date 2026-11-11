@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show Color;
 
 import 'package:drift/drift.dart' show Variable;
@@ -15,6 +16,7 @@ import '../../domain/projection/projection_engine.dart';
 import '../../domain/schedule/schedule_expander.dart';
 import '../../data/repositories/catalog_repo.dart';
 import '../../data/repositories/month_engine.dart' show specOf;
+import 'ring_widget_bridge.dart';
 
 class TierTotals {
   const TierTotals(this.planned, this.actual, {this.reservePlanned = 0, this.reserveActual = 0});
@@ -58,7 +60,7 @@ class RingPart {
   final bool outlined;
 }
 
-/// Ring order — shared by the dashboard ring and its legend.
+/// Ring order — shared by the dashboard ring, its legend and the home-screen widget.
 List<RingPart> ringParts(DashboardData d) {
   final t = d.tiers;
   RingPart tier(Tier x) => RingPart(x.label, BColors.tier(x), t.planned[x] ?? 0, t.actual[x] ?? 0, outlined: x == Tier.variable);
@@ -77,7 +79,9 @@ final dashboardProvider = FutureProvider<DashboardData?>((ref) async {
   final key = ref.watch(monthKeyProvider);
   final s = ref.watch(sessionProvider);
   if (key == null || s == null) return null;
-  return buildDashboard(s, Dates.day(DateTime.now()));
+  final d = await buildDashboard(s, Dates.day(DateTime.now()));
+  if (d != null) unawaited(RingWidgetBridge.update(ringParts(d)));
+  return d;
 });
 
 Future<DashboardData?> buildDashboard(Session s, DateTime today) async {

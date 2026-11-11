@@ -8,6 +8,7 @@ import '../core/constants.dart';
 import '../data/db/connection.dart';
 import 'backoff.dart';
 import 'key_manager.dart';
+import '../features/dashboard/ring_widget_bridge.dart';
 
 enum LockPhase { booting, needsSetup, locked, unlocked }
 
@@ -238,6 +239,7 @@ class LockController extends Notifier<LockState> {
     await s?.close();
     await _km.wipeKeys();
     await DbConnection.deleteFiles();
+    await RingWidgetBridge.clear();
   }
 
   /// Wrap system UI (biometric prompt, file picker, share sheet) so leaving the app for it
