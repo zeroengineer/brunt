@@ -65,12 +65,14 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
         subtitle: filtered ? 'Filtered: ${activeFilterLabels().join(' · ')}' : 'Transaction report',
       );
       if (!mounted) return;
-      Navigator.pop(context);
+      // Ask save / share while this sheet is still open: its context and ref must stay alive
+      // until the file is written (popping first silently dropped the export).
       await saveOrShare(context, ref,
           bytes: bytes,
           fileName: '$stem.pdf',
           mimeType: 'application/pdf',
           title: '${rows.length} entries · PDF');
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) toast(context, 'Could not build report: $e', error: true);
     } finally {
