@@ -7,6 +7,7 @@ import '../../core/constants.dart';
 import '../../core/dates.dart';
 import '../../core/money.dart';
 import '../../data/db/database.dart';
+import '../../data/repositories/catalog_repo.dart';
 import '../../design/design.dart';
 import '../common/pickers.dart';
 
@@ -60,7 +61,13 @@ class _TemplateFormState extends ConsumerState<TemplateForm> {
   String? _end;
   bool _busy = false;
 
+  /// Reserve: money kept aside inside a bank. Never spendable, shown in the bank's balance.
+  bool _reserve = false;
+
   bool get _editing => widget.existing != null;
+
+  /// Pill id for the Reserve category (it has no category row until the first reserve is saved).
+  static const _reservePill = -100;
 
   @override
   void initState() {
@@ -78,6 +85,10 @@ class _TemplateFormState extends ConsumerState<TemplateForm> {
     _active = e?.active ?? true;
     _start = e?.startMonth;
     _end = e?.endMonth;
+    if (e?.toAccountId != null) {
+      final to = (ref.read(allAccountsProvider).value ?? const <AccountRow>[]).byId(e!.toAccountId);
+      _reserve = to?.type == AccountType.reserve.code;
+    }
   }
 
   @override
@@ -99,6 +110,7 @@ class _TemplateFormState extends ConsumerState<TemplateForm> {
     final name = _name.text.trim();
     final amount = Money.parse(_amount.text) ?? 0;
     if (name.isEmpty) return toast(context, 'Give it a name', error: true);
+    if (_reserve) return _saveReserve(name, amount);
     if (_category == null) return toast(context, 'Pick a category', error: true);
     if (amount <= 0) return toast(context, 'Enter the usual amount', error: true);
     if (_freq == Frequency.daily && _days == 0) return toast(context, 'Pick at least one day', error: true);
@@ -132,6 +144,94 @@ class _TemplateFormState extends ConsumerState<TemplateForm> {
     }
   }
 
+  Future<void> _saveReserve(String name, int amount) async {
+    final s = ref.read(sessionProvider);
+    if (s == null) return;
+    if (_account == null) return toast(context, 'Pick the bank that keeps the reserve', error: true);
+    if (amount <= 0) return toast(context, 'Enter the amount to keep aside each month', error: true);
+    if (_start != null && _end != null && _end!.compareTo(_start!) < 0) {
+      return toast(context, 'End month is before the start month', error: true);
+    }
+    setState(() => _busy = true);
+    try {
+      final cat = await s.catalog.ensureReserveCategory();
+      final reserveAcc = await s.catalog.ensureReserveAccount(_account!);
+      final c = TemplatesCompanion(
+        categoryId: Value(cat),
+        name: Value(name),
+        defaultAmount: Value(amount),
+        defaultAccountId: Value(_account),
+        toAccountId: Value(reserveAcc),
+        frequency: Value(Frequency.monthly.code),
+        daysOfWeek: const Value(WeekMask.all),
+        dueDay: Value(_dueDay),
+        variableAmount: const Value(false),
+        startMonth: Value(_start),
+        endMonth: Value(_end),
+        active: Value(_active),
+      );
+      final id = _editing ? widget.existing!.id : await s.catalog.createTemplate(c);
+      if (_editing) await s.catalog.updateTemplate(id, c);
+      if (mounted) Navigator.pop(context, id);
+    } catch (e) {
+      if (mounted) toast(context, '$e', error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _reserveFields(List<AccountRow> accounts) {
+    final banks = accounts.where((a) => a.type == AccountType.bank.code).toList();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Kept in', style: BText.caption),
+      const SizedBox(height: 8),
+      if (banks.isEmpty)
+        const Text('Add a bank account first', style: BText.bodyMuted)
+      else
+        ChoicePills<int>(
+          items: accountItems(banks, showBalance: false),
+          selected: _account,
+          onChanged: _editing ? (_) {} : (v) => setState(() => _account = v),
+        ),
+      const SizedBox(height: 6),
+      const Text(
+        'Taken out of your salary plan like a bill, but the money stays in this bank. '
+        'It is never counted as spendable and shows only inside the bank balance.',
+        style: BText.caption,
+      ),
+      const SizedBox(height: 10),
+      SwitchRow(
+        label: 'Set aside on a day',
+        sub: _dueDay == null ? 'Anytime this month' : 'On the ${Dates.ordinal(_dueDay!)}',
+        value: _dueDay != null,
+        onChanged: (v) => setState(() => _dueDay = v ? 1 : null),
+      ),
+      if (_dueDay != null)
+        DayStepper(label: 'Day', value: _dueDay!, onChanged: (v) => setState(() => _dueDay = v), format: Dates.ordinal),
+      const SizedBox(height: 8),
+      _MonthRow(
+        label: 'Starts',
+        value: _start,
+        onTap: () async {
+          final v = await pickYearMonth(context, current: _start);
+          if (v != null) setState(() => _start = v.isEmpty ? null : v);
+        },
+      ),
+      _MonthRow(
+        label: 'Ends',
+        value: _end,
+        onTap: () async {
+          final v = await pickYearMonth(context, current: _end);
+          if (v != null) setState(() => _end = v.isEmpty ? null : v);
+        },
+      ),
+      if (_editing)
+        SwitchRow(label: 'Active', sub: 'Pause without deleting', value: _active, onChanged: (v) => setState(() => _active = v)),
+      const SizedBox(height: 22),
+      PillButton(label: _editing ? 'Save changes' : 'Add reserve', expand: true, busy: _busy, onPressed: () => _save(const [])),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cats = (ref.watch(categoriesProvider).value ?? const <CategoryRow>[])
@@ -144,17 +244,26 @@ class _TemplateFormState extends ConsumerState<TemplateForm> {
     final selectedTier = Tier.of(cats.where((c) => c.id == _category).firstOrNull?.tier ?? Tier.fixed.value);
     final savingsAccounts = accounts.where((a) => a.type == AccountType.savings.code).toList();
 
+    final canReserve = widget.scope != TemplateScope.daily;
+    bool isReserveCat(CategoryRow c) => c.name == CatalogRepo.reserveCategoryName && c.tier == Tier.savings.value;
+    void pickReserve() => setState(() {
+          _reserve = true;
+          _category = null;
+          _freq = Frequency.monthly;
+          if (_name.text.trim().isEmpty) _name.text = 'Reserve';
+          if (accounts.byId(_account)?.type != AccountType.bank.code) _account = null;
+        });
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(_editing ? 'Edit item' : 'New recurring item', style: BText.h2),
+      Text(_editing ? (_reserve ? 'Edit reserve' : 'Edit item') : 'New recurring item', style: BText.h2),
       const SizedBox(height: 16),
-      BField(label: 'Name', controller: _name, hint: 'Bus fare, Rent, Netflix…', textInputAction: TextInputAction.next),
+      BField(label: 'Name', controller: _name, hint: _reserve ? 'Emergency reserve' : 'Bus fare, Rent, Netflix…', textInputAction: TextInputAction.next),
       const SizedBox(height: 14),
-      BField.amount(label: 'Usual amount', controller: _amount),
+      BField.amount(label: _reserve ? 'Keep aside each month' : 'Usual amount', controller: _amount),
       const SizedBox(height: 16),
       const Text('Category', style: BText.caption),
       const SizedBox(height: 8),
       for (final tier in _tiers)
-        if (cats.any((c) => c.tier == tier.value)) ...[
+        if (cats.any((c) => c.tier == tier.value && !isReserveCat(c))) ...[
           Padding(
             padding: const EdgeInsets.only(left: 4, top: 4, bottom: 6),
             child: Row(children: [
@@ -165,19 +274,41 @@ class _TemplateFormState extends ConsumerState<TemplateForm> {
           ),
           ChoicePills<int>(
             wrap: true,
-            items: [for (final c in cats.where((c) => c.tier == tier.value)) ChoiceItem(c.id, c.name, icon: categoryIcon(c))],
-            selected: _category,
-            onChanged: (v) => setState(() {
-              _category = v;
-              final t = Tier.of(cats.firstWhere((c) => c.id == v).tier);
-              if (!_editing) {
-                if (t == Tier.daily && _freq != Frequency.daily) _freq = Frequency.daily;
-                if (t != Tier.daily && _freq == Frequency.daily) _freq = Frequency.monthly;
-              }
-            }),
+            items: [for (final c in cats.where((c) => c.tier == tier.value && !isReserveCat(c))) ChoiceItem(c.id, c.name, icon: categoryIcon(c))],
+            selected: _reserve ? null : _category,
+            onChanged: (_editing && _reserve)
+                ? (_) {}
+                : (v) => setState(() {
+                      _reserve = false;
+                      _category = v;
+                      final t = Tier.of(cats.firstWhere((c) => c.id == v).tier);
+                      if (!_editing) {
+                        if (t == Tier.daily && _freq != Frequency.daily) _freq = Frequency.daily;
+                        if (t != Tier.daily && _freq == Frequency.daily) _freq = Frequency.monthly;
+                      }
+                    }),
           ),
           const SizedBox(height: 6),
         ],
+      if (canReserve) ...[
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 4, bottom: 6),
+          child: Row(children: [
+            Container(width: 8, height: 8, decoration: const BoxDecoration(color: BColors.tierSavings, shape: BoxShape.circle)),
+            const SizedBox(width: 6),
+            Text('Reserve', style: BText.caption.copyWith(fontSize: 11)),
+          ]),
+        ),
+        ChoicePills<int>(
+          wrap: true,
+          items: [ChoiceItem(_reservePill, 'Reserve', icon: BIcons.of('shield'))],
+          selected: _reserve ? _reservePill : null,
+          onChanged: _editing ? (_) {} : (_) => pickReserve(),
+        ),
+        const SizedBox(height: 6),
+      ],
+      const SizedBox(height: 10),
+      if (_reserve) _reserveFields(accounts) else ...[
       const SizedBox(height: 12),
       const Text('How often', style: BText.caption),
       const SizedBox(height: 8),
@@ -195,12 +326,9 @@ class _TemplateFormState extends ConsumerState<TemplateForm> {
           padding: const EdgeInsets.only(top: 6, left: 4),
           child: Text(WeekMask.describe(_days), style: BText.caption),
         ),
-        const SizedBox(height: 8),
-        SwitchRow(
-          label: 'Amount varies',
-          sub: 'Learn the real average from your logs',
-          value: _variable,
-          onChanged: (v) => setState(() => _variable = v),
+        const Padding(
+          padding: EdgeInsets.only(top: 6, left: 4),
+          child: Text('The plan uses this amount for every day. Edits in the daily log change only that day.', style: BText.caption),
         ),
       ] else ...[
         SwitchRow(
@@ -265,6 +393,7 @@ class _TemplateFormState extends ConsumerState<TemplateForm> {
         SwitchRow(label: 'Active', sub: 'Pause without deleting', value: _active, onChanged: (v) => setState(() => _active = v)),
       const SizedBox(height: 22),
       PillButton(label: _editing ? 'Save changes' : 'Add item', expand: true, busy: _busy, onPressed: () => _save(cats)),
+      ],
     ]);
   }
 }

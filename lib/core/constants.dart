@@ -32,7 +32,11 @@ enum AccountType {
   loan('loan', 'Borrowed'),
 
   /// Money lent to someone (system account, balance = what is owed to you).
-  lent('lent', 'Lent out');
+  lent('lent', 'Lent out'),
+
+  /// Money kept aside inside a bank (system account linked to that bank). Never spendable;
+  /// shown as part of the bank's balance.
+  reserve('reserve', 'Reserve');
 
   const AccountType(this.code, this.label);
   final String code;
@@ -47,7 +51,7 @@ enum AccountType {
   bool get isLiability => this == creditCard || this == loan;
 
   /// Created by BRUNT on demand, never offered in "Add account".
-  bool get isSystem => this == loan || this == lent;
+  bool get isSystem => this == loan || this == lent || this == reserve;
   bool get defaultSpendable => this == cash || this == bank || this == wallet;
 }
 

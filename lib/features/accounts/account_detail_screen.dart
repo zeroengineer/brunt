@@ -50,6 +50,43 @@ class AccountDetailScreen extends ConsumerWidget {
     }
   }
 
+  /// Moves money out of a reserve back into its bank (it becomes spendable again).
+  Future<void> _release(BuildContext context, WidgetRef ref, AccountRow bank, AccountRow reserve) async {
+    final ctrl = TextEditingController(text: rupeesText(reserve.balance));
+    final ok = await showBruntSheet<bool>(
+      context,
+      builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Release reserve', style: BText.h2),
+        const SizedBox(height: 6),
+        Text('Moves money from ${reserve.name} back into ${bank.name}, where it counts as spendable again.', style: BText.bodyMuted),
+        const SizedBox(height: 18),
+        BField.amount(label: 'Amount to release', controller: ctrl, autofocus: true),
+        const SizedBox(height: 20),
+        PillButton(label: 'Release', expand: true, onPressed: () => Navigator.pop(ctx, true)),
+      ]),
+    );
+    final v = Money.parse(ctrl.text);
+    ctrl.dispose();
+    if (ok != true || v == null || v <= 0) return;
+    if (v > reserve.balance) {
+      if (context.mounted) toast(context, 'Only ${Money.format(reserve.balance)} is in reserve', error: true);
+      return;
+    }
+    try {
+      await ref.read(sessionProvider)?.ledger.add(Entry(
+            type: TxType.transfer,
+            amount: v,
+            date: Dates.day(DateTime.now()),
+            accountId: reserve.id,
+            toAccountId: bank.id,
+            note: 'Released from reserve',
+          ));
+      if (context.mounted) toast(context, 'Released ${Money.format(v)}');
+    } on LedgerException catch (e) {
+      if (context.mounted) toast(context, e.message, error: true);
+    }
+  }
+
   Future<void> _menu(BuildContext context, WidgetRef ref, AccountRow a, String v) async {
     final s = ref.read(sessionProvider);
     if (s == null) return;
@@ -81,6 +118,8 @@ class AccountDetailScreen extends ConsumerWidget {
     final card = type == AccountType.creditCard;
     final owed = type.isLiability;
     final upi = type == AccountType.upi;
+    final reserves = all.where((r) => r.type == AccountType.reserve.code && r.linkedAccountId == a.id && !r.archived).toList();
+    final reserveTotal = reserves.fold<int>(0, (s, r) => s + r.balance);
 
     final header = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       AppCard(
@@ -96,7 +135,11 @@ class AccountDetailScreen extends ConsumerWidget {
           if (!upi) ...[
             Text(owed ? (card ? 'Outstanding due' : 'Still to pay back') : (type == AccountType.lent ? 'Owed to you' : 'Balance'), style: BText.caption),
             const SizedBox(height: 4),
-            Text(Money.format(a.balance), style: BText.display.copyWith(fontSize: 34, color: owed && a.balance > 0 ? BColors.danger : BColors.text)),
+            Text(Money.format(a.balance + reserveTotal), style: BText.display.copyWith(fontSize: 34, color: owed && a.balance > 0 ? BColors.danger : BColors.text)),
+            if (reserves.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('${Money.format(a.balance)} available · ${Money.format(reserveTotal)} kept in reserve', style: BText.caption),
+            ],
           ] else
             Text('Payments via ${a.name} come out of ${all.byId(a.linkedAccountId)?.name ?? 'its bank'}.', style: BText.body),
           if (card && a.creditLimit != null) ...[
@@ -131,6 +174,14 @@ class AccountDetailScreen extends ConsumerWidget {
           onPressed: () => showAddEntrySheet(context, presetType: TxType.transfer, presetAccount: owed ? null : a.id, presetTo: owed ? a.id : null),
         ),
         PillButton(label: 'Edit', icon: LucideIcons.pencil, dense: true, variant: PillVariant.soft, onPressed: () => showAccountForm(context, existing: a)),
+        for (final r in reserves.where((r) => r.balance > 0))
+          PillButton(
+            label: reserves.length > 1 ? 'Release ${r.name}' : 'Release reserve',
+            icon: LucideIcons.shieldOff,
+            dense: true,
+            variant: PillVariant.soft,
+            onPressed: () => _release(context, ref, a, r),
+          ),
       ]),
       const SizedBox(height: 8),
       const SectionHeader('History', padding: EdgeInsets.fromLTRB(4, 16, 4, 0)),

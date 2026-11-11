@@ -54,6 +54,7 @@ abstract final class BIcons {
     'package': LucideIcons.package,
     'store': LucideIcons.store,
     'sparkles': LucideIcons.sparkles,
+    'shield': LucideIcons.shieldCheck,
   };
 
   static IconData of(String? key, {IconData fallback = LucideIcons.circleDollarSign}) => byKey[key] ?? fallback;
@@ -67,6 +68,7 @@ abstract final class BIcons {
         AccountType.savings => 'piggy_bank',
         AccountType.loan => 'hand_coins',
         AccountType.lent => 'hand_coins',
+        AccountType.reserve => 'shield',
       };
 
   static IconData tier(Tier t) => switch (t) {

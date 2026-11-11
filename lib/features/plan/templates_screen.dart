@@ -21,6 +21,14 @@ class TemplatesScreen extends ConsumerWidget {
     final cats = ref.watch(categoriesProvider).value ?? const <CategoryRow>[];
     final accounts = ref.watch(allAccountsProvider).value ?? const <AccountRow>[];
     Tier tierOf(TemplateRow t) => Tier.of(cats.byId(t.categoryId)?.tier ?? 3);
+    bool isReserve(TemplateRow t) => accounts.byId(t.toAccountId)?.type == AccountType.reserve.code;
+    // Sections in order; Reserve gets its own group right after Savings.
+    final sections = <(String, List<TemplateRow>)>[
+      for (final tier in const [Tier.priority, Tier.savings, Tier.fixed, Tier.daily, Tier.variable]) ...[
+        (tier.label, templates.where((t) => !isReserve(t) && tierOf(t) == tier).toList()),
+        if (tier == Tier.savings) ('Reserve', templates.where(isReserve).toList()),
+      ],
+    ];
 
     return BruntScaffold(
       title: 'Recurring items',
@@ -39,10 +47,10 @@ class TemplatesScreen extends ConsumerWidget {
           : ListView(
               padding: const EdgeInsets.fromLTRB(BSpace.gutter, 0, BSpace.gutter, 100),
               children: [
-                for (final tier in const [Tier.priority, Tier.savings, Tier.fixed, Tier.daily, Tier.variable])
-                  if (templates.any((t) => tierOf(t) == tier)) ...[
-                    SectionHeader(tier.label),
-                    for (final t in templates.where((t) => tierOf(t) == tier))
+                for (final (label, items) in sections)
+                  if (items.isNotEmpty) ...[
+                    SectionHeader(label),
+                    for (final t in items)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: AppCard(
@@ -67,7 +75,7 @@ class TemplatesScreen extends ConsumerWidget {
                                     Frequency.of(t.frequency) == Frequency.daily
                                         ? 'Daily · ${WeekMask.describe(t.daysOfWeek)}'
                                         : '${Frequency.of(t.frequency).label}${t.dueDay != null ? ' · due ${Dates.ordinal(t.dueDay!)}' : ''}',
-                                    accounts.byId(t.defaultAccountId)?.name,
+                                    isReserve(t) ? 'kept in ${accounts.byId(t.defaultAccountId)?.name ?? '—'}' : accounts.byId(t.defaultAccountId)?.name,
                                     if (t.endMonth != null && t.frequency != 'one_time') 'until ${Dates.monthLabel(t.endMonth!)}',
                                   ].whereType<String>().join(' · '),
                                   style: BText.caption,

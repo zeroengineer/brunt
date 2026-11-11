@@ -42,8 +42,8 @@ class CatalogRepo {
               color: Value(color),
               startingBalance: Value(start),
               balance: Value(start),
-              linkedAccountId: Value(type == AccountType.upi ? linkedAccountId : null),
-              includeInSpendable: Value(includeInSpendable ?? type.defaultSpendable),
+              linkedAccountId: Value(type == AccountType.upi || type == AccountType.reserve ? linkedAccountId : null),
+              includeInSpendable: Value(type == AccountType.reserve ? false : (includeInSpendable ?? type.defaultSpendable)),
               creditLimit: Value(type.isCard ? creditLimit : null),
               statementDay: Value(type.isCard ? statementDay : null),
               dueDay: Value(type.isCard ? dueDay : null),
@@ -69,6 +69,36 @@ class CatalogRepo {
     }
     return createAccount(name: type.label, type: type, includeInSpendable: false);
   }
+
+  /// Finds or creates the reserve kept inside bank [bankId] (system account, never spendable).
+  Future<int> ensureReserveAccount(int bankId) async {
+    final existing = await (db.select(db.accounts)
+          ..where((a) => a.type.equals(AccountType.reserve.code) & a.linkedAccountId.equals(bankId)))
+        .get();
+    if (existing.isNotEmpty) {
+      final a = existing.first;
+      if (a.archived) await setArchived(a.id, false);
+      return a.id;
+    }
+    final bank = await (db.select(db.accounts)..where((a) => a.id.equals(bankId))).getSingle();
+    return createAccount(
+        name: '${bank.name} reserve', type: AccountType.reserve, linkedAccountId: bankId, includeInSpendable: false);
+  }
+
+  /// The "Reserve" category (Savings tier), created on first use.
+  Future<int> ensureReserveCategory() async {
+    final existing = await (db.select(db.categories)
+          ..where((c) => c.name.equals(reserveCategoryName) & c.tier.equals(Tier.savings.value)))
+        .get();
+    if (existing.isNotEmpty) {
+      final c = existing.first;
+      if (c.archived) await setCategoryArchived(c.id, false);
+      return c.id;
+    }
+    return createCategory(name: reserveCategoryName, tier: Tier.savings, icon: 'shield');
+  }
+
+  static const reserveCategoryName = 'Reserve';
 
   Future<void> updateAccount(
     int id, {
@@ -103,8 +133,8 @@ class CatalogRepo {
           color: Value(color),
           startingBalance: Value(startingBalance ?? a.startingBalance),
           balance: Value(balance),
-          linkedAccountId: Value(type == AccountType.upi ? linkedAccountId : null),
-          includeInSpendable: Value(includeInSpendable),
+          linkedAccountId: Value(type == AccountType.upi ? linkedAccountId : (type == AccountType.reserve ? a.linkedAccountId : null)),
+          includeInSpendable: Value(type == AccountType.reserve ? false : includeInSpendable),
           creditLimit: Value(type.isCard ? creditLimit : null),
           statementDay: Value(type.isCard ? statementDay : null),
           dueDay: Value(type.isCard ? dueDay : null),

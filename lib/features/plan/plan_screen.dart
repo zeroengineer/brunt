@@ -8,6 +8,7 @@ import '../../core/constants.dart';
 import '../../core/dates.dart';
 import '../../core/money.dart';
 import '../../data/db/database.dart';
+import '../../data/repositories/catalog_repo.dart';
 import '../../design/design.dart';
 import '../common/pickers.dart';
 import 'pay_sheet.dart';
@@ -56,6 +57,16 @@ class PlanView extends ConsumerWidget {
       );
     }
     Tier tierOf(PlannedRow p) => p.cardAccountId != null ? Tier.priority : Tier.of(cats.byId(p.categoryId)?.tier ?? 3);
+    bool isReserve(PlannedRow p) {
+      final c = cats.byId(p.categoryId);
+      return c != null && c.name == CatalogRepo.reserveCategoryName && c.tier == Tier.savings.value;
+    }
+    final sections = <(String, Tier, List<PlannedRow>)>[
+      for (final tier in const [Tier.priority, Tier.savings, Tier.fixed, Tier.daily, Tier.variable]) ...[
+        (tier.label, tier, items.where((p) => !isReserve(p) && tierOf(p) == tier).toList()),
+        if (tier == Tier.savings) ('Reserve', Tier.savings, items.where(isReserve).toList()),
+      ],
+    ];
     final today = Dates.day(DateTime.now());
     final total = items.where((p) => p.status != 'skipped').fold<int>(0, (s, p) => s + p.amount);
     final paid = items.where((p) => p.status == 'paid').fold<int>(0, (s, p) => s + p.amount);
@@ -81,16 +92,17 @@ class PlanView extends ConsumerWidget {
             ),
           ]),
         ),
-        for (final tier in const [Tier.priority, Tier.savings, Tier.fixed, Tier.daily, Tier.variable])
-          if (items.any((p) => tierOf(p) == tier)) ...[
+        for (final (label, tier, list) in sections)
+          if (list.isNotEmpty) ...[
             SectionHeader(
-              tier.label,
+              label,
               trailing: Text(
-                Money.format(items.where((p) => tierOf(p) == tier && p.status != 'skipped').fold<int>(0, (s, p) => s + p.amount)),
+                Money.format(list.where((p) => p.status != 'skipped').fold<int>(0, (s, p) => s + p.amount)),
                 style: BText.amount(size: 14, color: BColors.textMuted),
               ),
             ),
-            for (final p in items.where((p) => tierOf(p) == tier)) _PlannedTile(item: p, tier: tier, today: today, cat: cats.byId(p.categoryId)),
+            for (final p in list)
+              _PlannedTile(item: p, tier: tier, today: today, cat: cats.byId(p.categoryId), color: label == 'Reserve' ? BColors.tierReserve : null),
           ],
       ],
     );
@@ -98,8 +110,11 @@ class PlanView extends ConsumerWidget {
 }
 
 class _PlannedTile extends StatelessWidget {
-  const _PlannedTile({required this.item, required this.tier, required this.today, this.cat});
+  const _PlannedTile({required this.item, required this.tier, required this.today, this.cat, this.color});
   final PlannedRow item;
+
+  /// Overrides the tier colour (Reserve).
+  final Color? color;
   final Tier tier;
   final DateTime today;
   final CategoryRow? cat;
@@ -116,7 +131,7 @@ class _PlannedTile extends StatelessWidget {
             PlannedStatus.skipped => ChipStatus.skipped,
             PlannedStatus.pending => ChipStatus.pending,
           };
-    final color = BColors.tier(tier) == BColors.tierVariable ? BColors.textMuted : BColors.tier(tier);
+    final color = this.color ?? (BColors.tier(tier) == BColors.tierVariable ? BColors.textMuted : BColors.tier(tier));
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: AppCard(

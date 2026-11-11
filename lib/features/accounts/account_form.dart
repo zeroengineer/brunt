@@ -151,6 +151,7 @@ class _AccountFormState extends ConsumerState<AccountForm> {
           AccountType.savings => 'RD / Emergency fund',
           AccountType.loan => 'Borrowed',
           AccountType.lent => 'Lent out',
+          AccountType.reserve => 'Reserve',
         },
         textInputAction: TextInputAction.next,
       ),

@@ -15,6 +15,7 @@ Color accountColor(AccountRow a) => BColors.fromHex(a.color, fallback: switch (A
       AccountType.savings => BColors.tierSavings,
       AccountType.loan => BColors.warning,
       AccountType.lent => BColors.primarySoft,
+      AccountType.reserve => BColors.tierSavings,
     });
 
 IconData accountIcon(AccountRow a) => BIcons.of(a.icon ?? BIcons.defaultForAccount(AccountType.of(a.type)));
@@ -27,7 +28,7 @@ IconData categoryIcon(CategoryRow c) => BIcons.of(c.icon, fallback: BIcons.tier(
 
 /// Account pills for every entry sheet. Cards show available limit; others the balance.
 List<ChoiceItem<int>> accountItems(Iterable<AccountRow> accounts, {bool showBalance = true}) => [
-      for (final a in accounts)
+      for (final a in accounts.where((a) => a.type != AccountType.reserve.code))
         ChoiceItem(
           a.id,
           a.name,
@@ -47,6 +48,10 @@ String accountSubtitle(AccountRow a, List<AccountRow> all) {
   }
   if (t == AccountType.loan) return 'Borrowed · still to pay back';
   if (t == AccountType.lent) return 'Lent out · owed to you';
+  if (t == AccountType.reserve) {
+    final bank = all.where((x) => x.id == a.linkedAccountId).firstOrNull;
+    return 'Reserve · kept in ${bank?.name ?? '—'}';
+  }
   if (t == AccountType.creditCard) {
     final limit = a.creditLimit;
     return limit == null ? 'Credit card' : 'Available ${Money.format(limit - a.balance)} of ${Money.compact(limit)}';
@@ -174,4 +179,14 @@ String rupeesText(int paise) {
   final r = paise ~/ 100;
   final p = paise % 100;
   return p == 0 ? '$r' : '$r.${p.toString().padLeft(2, '0')}';
+}
+
+/// Reserve held inside each bank: bank id → total kept aside (system reserve accounts).
+Map<int, int> reservesByBank(Iterable<AccountRow> all) {
+  final out = <int, int>{};
+  for (final a in all) {
+    if (a.type != AccountType.reserve.code || a.archived || a.linkedAccountId == null) continue;
+    out[a.linkedAccountId!] = (out[a.linkedAccountId!] ?? 0) + a.balance;
+  }
+  return out;
 }

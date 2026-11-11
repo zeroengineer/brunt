@@ -172,6 +172,16 @@ class Ledger {
         return txId;
       });
 
+  /// Changes the amount planned for one item in its month only (the recurring item keeps its
+  /// usual amount). Only pending items can change.
+  Future<void> setPlannedAmount(int plannedId, int amount) => db.transaction(() async {
+        if (amount < 0) throw const LedgerException('Amount cannot be negative');
+        final p = await (db.select(db.plannedItems)..where((x) => x.id.equals(plannedId))).getSingle();
+        if (p.status != PlannedStatus.pending.code) throw const LedgerException('Only a pending item can change its amount');
+        await (db.update(db.plannedItems)..where((x) => x.id.equals(plannedId))).write(PlannedItemsCompanion(amount: Value(amount)));
+        await _touch({p.monthId});
+      });
+
   Future<void> setPlannedStatus(int plannedId, PlannedStatus status) => db.transaction(() async {
         final p = await (db.select(db.plannedItems)..where((x) => x.id.equals(plannedId))).getSingle();
         if (p.transactionId != null) {

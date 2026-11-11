@@ -48,10 +48,12 @@ class AccountsScreen extends ConsumerWidget {
     final flows = ref.watch(accountFlowsProvider).value ?? const {};
     final trends = ref.watch(accountTrendsProvider).value ?? const {};
     if (all == null) return const Center(child: CircularProgressIndicator());
-    final active = all.where((a) => !a.archived).toList();
+    final active = all.where((a) => !a.archived && a.type != AccountType.reserve.code).toList();
+    final reserves = reservesByBank(all);
     final archived = all.where((a) => a.archived).toList();
 
-    int sum(bool Function(AccountRow) f) => active.where(f).fold(0, (s, a) => s + a.balance);
+    int sum(bool Function(AccountRow) f) =>
+        all.where((a) => !a.archived).where(f).fold(0, (s, a) => s + a.balance);
     final spendable = sum((a) => a.includeInSpendable && !AccountType.of(a.type).isLiability && a.type != AccountType.upi.code && a.type != AccountType.lent.code);
     final savings = sum((a) => a.type == AccountType.savings.code);
     final dues = sum((a) => AccountType.of(a.type).isLiability);
@@ -128,7 +130,7 @@ class AccountsScreen extends ConsumerWidget {
               return Padding(
                 key: ValueKey(a.id),
                 padding: const EdgeInsets.only(bottom: 10),
-                child: _AccountCard(account: a, all: all, flow: f, trend: trends[a.id] ?? const []),
+                child: _AccountCard(account: a, all: all, flow: f, trend: trends[a.id] ?? const [], reserve: reserves[a.id] ?? 0),
               );
             },
           ),
@@ -157,8 +159,11 @@ class _Stat extends StatelessWidget {
 }
 
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({required this.account, required this.all, required this.flow, required this.trend});
+  const _AccountCard({required this.account, required this.all, required this.flow, required this.trend, this.reserve = 0});
   final AccountRow account;
+
+  /// Money kept aside inside this bank (shown as part of its balance, never spendable).
+  final int reserve;
   final List<AccountRow> all;
   final (int, int)? flow;
   final List<int> trend;
@@ -186,8 +191,9 @@ class _AccountCard extends StatelessWidget {
           ),
           if (type != AccountType.upi)
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(Money.format(a.balance), style: BText.amount(size: 17, color: owed && a.balance > 0 ? BColors.danger : BColors.text)),
+              Text(Money.format(a.balance + reserve), style: BText.amount(size: 17, color: owed && a.balance > 0 ? BColors.danger : BColors.text)),
               if (owed) Text(card ? 'outstanding' : 'to pay back', style: BText.caption.copyWith(fontSize: 10.5)),
+              if (reserve != 0) Text('incl. ${Money.compact(reserve)} reserve', style: BText.caption.copyWith(fontSize: 10.5)),
             ]),
         ]),
         if (usedPct != null) ...[

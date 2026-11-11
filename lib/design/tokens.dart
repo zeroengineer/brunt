@@ -24,6 +24,7 @@ abstract final class BColors {
   static const tierFixed = Color(0xFFC6DFFF);
   static const tierDaily = Color(0xFFF5F5F5);
   static const tierVariable = Color(0xFF3A4048);
+  static const tierReserve = tierSavings; // Reserve shares the Savings colour
 
   static Color tier(Tier t) => switch (t) {
         Tier.income => success,
