@@ -102,6 +102,32 @@ void main() {
     await t.pump(const Duration(seconds: 1));
   });
 
+  testWidgets('ring: touching a segment shows that tier, lifting the finger shows spendable again', (t) async {
+    final (s, _) = (await t.runAsync(seeded))!;
+    await t.pumpWidget(host(s, const DashboardView()));
+    await settle(t);
+    Finder inRing(String text) => find.descendant(of: find.byType(MoneyRing), matching: find.text(text));
+    expect(inRing('Spendable now'), findsOneWidget);
+
+    final ring = find.byType(MoneyRing);
+    final box = t.getRect(ring);
+    final topBand = Offset(box.center.dx + 30, box.top + t.widget<MoneyRing>(ring).thickness / 2);
+
+    // Finger down: shows straight away, no long press needed.
+    final g = await t.startGesture(topBand);
+    await t.pump();
+    expect(inRing('Spendable now'), findsNothing);
+    expect(find.text('Fixed bills'), findsOneWidget);
+    expect(find.textContaining('Spent '), findsOneWidget);
+
+    // Finger up: back.
+    await g.up();
+    await t.pump();
+    expect(inRing('Spendable now'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+    await t.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('plan view lists the rent item as pending', (t) async {
     final (s, _) = (await t.runAsync(seeded))!;
     await t.pumpWidget(host(s, const PlanView()));

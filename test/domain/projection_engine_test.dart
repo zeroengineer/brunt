@@ -64,7 +64,7 @@ void main() {
     expect(p.projectedEnd, 2300000 + 5000000 - 2000000 - 120000 - 500000);
     expect(p.status, MonthStatus.comfortable);
     expect(p.daysLeft, 30);
-    expect(p.safePerDay, ((2300000 + 5000000 - 2000000 - 120000 - 500000) ~/ 30) ~/ 100 * 100);
+    expect(p.dayAllowance, ((2300000 + 5000000 - 2000000 - 120000 - 500000) ~/ 30) ~/ 100 * 100);
   });
 
   test('salary already received is not double counted', () {
@@ -175,5 +175,93 @@ void main() {
       trackingStart: DateTime(2026, 11, 20),
     ));
     expect(p.dailyLeft, 11 * 4000);
+  });
+
+  group('safe to spend today', () {
+    // Nov 10, salary received, bus ₹40/day on cash, variable budget ₹5,000.
+    final day = DateTime(2026, 11, 10);
+    ProjectionInput at({
+      required int cashBal,
+      Set<(String, int)> logged = const {},
+      int spent = 0,
+      List<PPlanned> planned = const [],
+      int bankBal = 2000000,
+      ProjectionInput? sod,
+    }) =>
+        ProjectionInput(
+          today: day,
+          yearMonth: '2026-11',
+          accounts: [
+            PAccount(id: 1, name: 'Cash', type: AccountType.cash, balance: cashBal),
+            PAccount(id: 2, name: 'HDFC', type: AccountType.bank, balance: bankBal),
+          ],
+          salaryExpected: 5000000,
+          salaryReceived: 5000000,
+          dailyTemplates: [bus()],
+          logged: logged,
+          trackingStart: day,
+          pendingPlanned: planned,
+          variableBudget: 500000,
+          variableSpent: spent,
+          startOfDay: sod,
+        );
+
+    final start = at(cashBal: 300000);
+    final sodP = ProjectionEngine.compute(start);
+    // 21 days left including today; 21 bus fares, ₹5,000 variable budget left
+    const expectedAllowance = ((300000 + 2000000 - 21 * 4000 - 500000) ~/ 21) ~/ 100 * 100;
+
+    test('at the start of the day it equals the allowance', () {
+      expect(sodP.dayAllowance, expectedAllowance);
+      expect(sodP.safeToday, expectedAllowance);
+    });
+
+    test('logging a daily item as usual does not reduce it', () {
+      final p = ProjectionEngine.compute(at(cashBal: 296000, logged: {('2026-11-10', 10)}, sod: start));
+      expect(p.dayAllowance, expectedAllowance);
+      expect(p.safeToday, expectedAllowance);
+    });
+
+    test('paying a planned bill does not reduce it', () {
+      final rent = PPlanned(name: 'Rent', amount: 1000000, tier: Tier.fixed, dueDate: day, payingAccountId: 2);
+      final s0 = at(cashBal: 300000, planned: [rent]);
+      final p = ProjectionEngine.compute(at(cashBal: 300000, bankBal: 1000000, sod: s0));
+      expect(p.safeToday, p.dayAllowance);
+    });
+
+    test('a daily overage and an unplanned expense reduce it, and it can go negative', () {
+      // Bus cost ₹100 instead of ₹40 → ₹60 extra.
+      final p = ProjectionEngine.compute(at(cashBal: 290000, logged: {('2026-11-10', 10)}, sod: start));
+      expect(p.safeToday, expectedAllowance - 6000);
+
+      // A ₹1,00,000 gadget bought from the bank, on top of a fully used variable budget.
+      final used = at(cashBal: 300000, spent: 500000);
+      final big = ProjectionEngine.compute(at(cashBal: 300000, bankBal: 1900000, spent: 500000 + 10000000 ~/ 100, sod: used));
+      expect(big.safeToday, ProjectionEngine.compute(used).dayAllowance - 100000);
+      final huge = ProjectionEngine.compute(at(cashBal: 300000, bankBal: 1000000, spent: 1500000, sod: used));
+      expect(huge.safeToday, lessThan(0));
+    });
+
+    test('variable spending inside the budget is already planned for', () {
+      final p = ProjectionEngine.compute(at(cashBal: 250000, spent: 50000, sod: start));
+      expect(p.safeToday, expectedAllowance);
+    });
+  });
+
+  test('reserve accounts are never spendable', () {
+    final p = ProjectionEngine.compute(input(accounts: const [
+      cash,
+      bank,
+      PAccount(id: 9, name: 'HDFC reserve', type: AccountType.reserve, balance: 1000000, linkedAccountId: 2, includeInSpendable: true),
+    ]));
+    expect(p.balanceNow, 2300000);
+  });
+
+  test('a pending reserve reduces the month end like a bill', () {
+    final base = ProjectionEngine.compute(input());
+    final withReserve = ProjectionEngine.compute(input(planned: [
+      PPlanned(name: 'Reserve', amount: 1000000, tier: Tier.savings, dueDate: DateTime(2026, 11, 2), payingAccountId: 2),
+    ]));
+    expect(withReserve.projectedEnd, base.projectedEnd - 1000000);
   });
 }

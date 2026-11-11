@@ -54,6 +54,7 @@ class ProjectionInput {
     this.variableSpent = 0,
     this.comfortPct = 10,
     this.cardWarnPct = 80,
+    this.startOfDay,
   });
 
   final DateTime today;
@@ -78,6 +79,10 @@ class ProjectionInput {
   final int variableSpent;
   final int comfortPct;
   final int cardWarnPct;
+
+  /// The same month as it stood at the start of [today] (today's spending reversed,
+  /// today's daily logs and payments undone). Drives the live "safe to spend today".
+  final ProjectionInput? startOfDay;
 }
 
 enum MonthStatus { comfortable, tight, short }
@@ -122,7 +127,8 @@ class Projection {
     required this.variableLeft,
     required this.daysLeft,
     required this.projectedEnd,
-    required this.safePerDay,
+    required this.dayAllowance,
+    required this.safeToday,
     required this.status,
     required this.threshold,
     this.gap,
@@ -136,7 +142,14 @@ class Projection {
   final int variableLeft;
   final int daysLeft;
   final int projectedEnd;
-  final int safePerDay;
+
+  /// What today was worth at the start of the day: the projected month-end surplus
+  /// spread over the days left (today included). Whole rupees, never negative.
+  final int dayAllowance;
+
+  /// [dayAllowance] minus what today's unplanned spending took off the month end.
+  /// Planned payments and daily items logged as usual leave it alone. Can go negative.
+  final int safeToday;
   final MonthStatus status;
   final int threshold;
   final GapCheck? gap;
@@ -163,7 +176,7 @@ abstract final class ProjectionEngine {
     }
 
     bool spendable(PAccount a) =>
-        a.includeInSpendable && !a.type.isLiability && a.type != AccountType.upi && a.type != AccountType.lent;
+        a.includeInSpendable && !a.type.isLiability && a.type != AccountType.upi && a.type != AccountType.lent && a.type != AccountType.reserve;
 
     /// Will money for this item leave the spendable pool this month?
     /// Null account = unknown → assume yes. Card → no (it goes on the card's next bill).
@@ -203,7 +216,10 @@ abstract final class ProjectionEngine {
     final projectedEnd = balanceNow + pendingSalary - committedLeft - dailyLeft - variableLeft;
     // What is free per day *beyond* the planned daily costs, bills and variable budget —
     // i.e. the projected month-end surplus spread over the remaining days. Whole rupees.
-    final safePerDay = projectedEnd <= 0 ? 0 : (projectedEnd ~/ daysLeft) ~/ 100 * 100;
+    int allowance(int end, int days) => end <= 0 ? 0 : (end ~/ days) ~/ 100 * 100;
+    final sod = i.startOfDay == null ? null : compute(i.startOfDay!);
+    final dayAllowance = sod == null ? allowance(projectedEnd, daysLeft) : sod.dayAllowance;
+    final safeToday = sod == null ? dayAllowance : dayAllowance - (sod.projectedEnd - projectedEnd);
 
     final threshold = Money.percent(i.salaryExpected, i.comfortPct);
     final status = projectedEnd < 0
@@ -266,7 +282,7 @@ abstract final class ProjectionEngine {
       }
     }
     for (final a in i.accounts) {
-      if (!a.type.holdsBalance || a.type.isLiability || a.type == AccountType.savings || a.type == AccountType.lent) continue;
+      if (!a.type.holdsBalance || a.type.isLiability || a.type == AccountType.savings || a.type == AccountType.lent || a.type == AccountType.reserve) continue;
       var b = a.balance;
       var minB = b;
       DateTime? runOut;
@@ -325,7 +341,8 @@ abstract final class ProjectionEngine {
       variableLeft: variableLeft,
       daysLeft: daysLeft,
       projectedEnd: projectedEnd,
-      safePerDay: safePerDay,
+      dayAllowance: dayAllowance,
+      safeToday: safeToday,
       status: status,
       threshold: threshold,
       gap: gap,

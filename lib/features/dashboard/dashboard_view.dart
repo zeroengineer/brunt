@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Banner;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -109,33 +110,67 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _Ring extends StatelessWidget {
+class _Ring extends StatefulWidget {
   const _Ring({required this.data});
   final DashboardData data;
 
   @override
+  State<_Ring> createState() => _RingState();
+}
+
+class _RingState extends State<_Ring> {
+  int? _selected;
+
+  @override
   Widget build(BuildContext context) {
-    final t = data.tiers.planned;
+    final data = widget.data;
+    final parts = ringParts(data);
+    final p = data.projection;
     final w = MediaQuery.sizeOf(context).width;
     final size = (w - 80).clamp(200.0, 290.0);
+    final part = _selected == null || _selected! >= parts.length ? null : parts[_selected!];
+
+    Widget centre;
+    if (part == null) {
+      centre = Column(mainAxisSize: MainAxisSize.min, children: [
+        const Text('Spendable now', style: BText.caption),
+        const SizedBox(height: 4),
+        FittedBox(
+          child: Text(Money.format(p.balanceNow), style: BText.display.copyWith(fontSize: size * 0.13)),
+        ),
+        const SizedBox(height: 2),
+        Text(Dates.monthLabel(data.month.yearMonth), style: BText.caption),
+      ]);
+    } else {
+      final left = part.planned - part.actual;
+      centre = Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(part.label, style: BText.caption.copyWith(color: part.outlined ? BColors.text : part.color)),
+        const SizedBox(height: 4),
+        FittedBox(child: Text(Money.format(part.planned), style: BText.display.copyWith(fontSize: size * 0.11))),
+        const SizedBox(height: 4),
+        FittedBox(child: Text('${part.label == 'Reserve' ? 'Set aside' : 'Spent'} ${Money.format(part.actual)}', style: BText.caption)),
+        FittedBox(
+          child: Text(left >= 0 ? 'Left ${Money.format(left)}' : 'Over by ${Money.format(-left)}',
+              style: BText.caption.copyWith(color: left >= 0 ? BColors.success : BColors.danger)),
+        ),
+      ]);
+    }
+
     return Semantics(
-      label: 'Spendable now ${Money.format(data.projection.balanceNow)}',
+      label: part == null
+          ? 'Spendable now ${Money.format(p.balanceNow)}'
+          : '${part.label}: planned ${Money.format(part.planned)}, done ${Money.format(part.actual)}',
       child: MoneyRing(
         size: size,
         thickness: size * 0.115,
-        segments: [
-          for (final tier in const [Tier.priority, Tier.savings, Tier.fixed, Tier.daily, Tier.variable])
-            RingSegment(t[tier] ?? 0, BColors.tier(tier), tier.label),
-        ],
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Spendable now', style: BText.caption),
-          const SizedBox(height: 4),
-          FittedBox(
-            child: Text(Money.format(data.projection.balanceNow), style: BText.display.copyWith(fontSize: size * 0.13)),
-          ),
-          const SizedBox(height: 2),
-          Text(Dates.monthLabel(data.month.yearMonth), style: BText.caption),
-        ]),
+        selected: _selected,
+        onSelect: (i) {
+          if (i == _selected) return;
+          if (i != null) HapticFeedback.selectionClick();
+          setState(() => _selected = i);
+        },
+        segments: [for (final x in parts) RingSegment(x.planned, x.color, x.label)],
+        child: centre,
       ),
     );
   }
@@ -147,22 +182,21 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = data.tiers.planned;
     return Wrap(alignment: WrapAlignment.center, spacing: 14, runSpacing: 8, children: [
-      for (final tier in const [Tier.priority, Tier.savings, Tier.fixed, Tier.daily, Tier.variable])
-        if ((t[tier] ?? 0) > 0)
+      for (final x in ringParts(data))
+        if (x.planned > 0)
           Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
               width: 10,
               height: 10,
               decoration: BoxDecoration(
-                color: BColors.tier(tier),
+                color: x.color,
                 shape: BoxShape.circle,
-                border: tier == Tier.variable ? Border.all(color: BColors.textMuted) : null,
+                border: x.outlined ? Border.all(color: BColors.textMuted) : null,
               ),
             ),
             const SizedBox(width: 6),
-            Text('${tier.label} ${Money.compact(t[tier]!)}', style: BText.caption),
+            Text('${x.label} ${Money.compact(x.planned)}', style: BText.caption),
           ]),
     ]);
   }
@@ -174,7 +208,8 @@ class _AccountStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shown = accounts.where((a) => a.type != AccountType.upi.code).toList();
+    final shown = accounts.where((a) => a.type != AccountType.upi.code && a.type != AccountType.reserve.code).toList();
+    final reserves = reservesByBank(accounts);
     if (shown.isEmpty) return const SizedBox();
     return SizedBox(
       height: 76,
@@ -193,9 +228,9 @@ class _AccountStrip extends StatelessWidget {
               IconBadge(icon: accountIcon(a), color: accountColor(a), size: 34),
               const SizedBox(width: 10),
               Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(card ? '${a.name} due' : a.name, style: BText.caption),
+                Text(card ? '${a.name} due' : ((reserves[a.id] ?? 0) != 0 ? '${a.name} · incl. reserve' : a.name), style: BText.caption),
                 const SizedBox(height: 2),
-                Text(Money.format(a.balance), style: BText.amount(size: 15, color: card && a.balance > 0 ? BColors.danger : BColors.text)),
+                Text(Money.format(a.balance + (reserves[a.id] ?? 0)), style: BText.amount(size: 15, color: card && a.balance > 0 ? BColors.danger : BColors.text)),
               ]),
             ]),
           );
@@ -212,6 +247,7 @@ class _SafeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final endColor = p.projectedEnd < 0 ? BColors.danger : (p.status == MonthStatus.tight ? BColors.warning : BColors.success);
+    final over = p.safeToday < 0;
     return AppCard(
       padding: const EdgeInsets.all(18),
       child: Row(children: [
@@ -219,7 +255,8 @@ class _SafeCard extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Safe to spend today', style: BText.caption),
             const SizedBox(height: 6),
-            Text(Money.format(p.safePerDay), style: BText.amount(size: 30, weight: FontWeight.w800)),
+            Text(over ? '− ${Money.format(-p.safeToday)}' : Money.format(p.safeToday),
+                style: BText.amount(size: 30, weight: FontWeight.w800, color: over ? BColors.danger : BColors.text)),
             const SizedBox(height: 4),
             Text('${p.daysLeft} day${p.daysLeft == 1 ? '' : 's'} left · after plan', style: BText.caption),
           ]),

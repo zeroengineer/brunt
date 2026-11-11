@@ -54,7 +54,7 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(t.name, style: BText.h2),
-          Text(Dates.short(_day), style: BText.caption),
+          Text('Only for ${Dates.short(_day)}. To change every day, edit ${t.name} in Recurring items.', style: BText.caption),
           const SizedBox(height: 18),
           BField.amount(label: 'Amount spent', controller: ctrl, autofocus: true),
           const SizedBox(height: 14),
